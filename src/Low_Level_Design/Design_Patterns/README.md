@@ -1,0 +1,6 @@
+
+
+* Creational
+* Structural
+* Behavioral
+

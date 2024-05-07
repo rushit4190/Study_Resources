@@ -1,0 +1,2 @@
+- https://www.baeldung.com/java-synchronize-static-variable-different-threads
+- https://www.baeldung.com/java-synchronized

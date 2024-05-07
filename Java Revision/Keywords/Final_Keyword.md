@@ -1,0 +1,6 @@
+- https://www.baeldung.com/java-final
+- https://www.baeldung.com/java-finally-keyword
+- https://www.baeldung.com/java-final-finally-finalize
+- https://www.baeldung.com/java-final-performance
+- https://www.baeldung.com/java-static-final-variables
+- https://www.baeldung.com/java-static-final-order
