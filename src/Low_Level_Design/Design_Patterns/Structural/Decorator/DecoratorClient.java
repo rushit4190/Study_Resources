@@ -214,5 +214,11 @@ public class DecoratorClient {
         System.out.println("Shipping Cost: Rs." + shippingProduct.getShippingCost());
         System.out.println("Warranty Years: " + warrantyProduct.getWarrantyYears());
         System.out.println("Gift Wrapper Cost: Rs." + giftWrapperProduct.getGiftWrapperCost());
+
+        //alternative approach with stacking of decorators
+
+        Product basicProduct1 = new GiftWrapperDecorator(new WarrantyDecorator(new BasicProduct("Laptop", 50000), 2), 100.0);
+        System.out.println("Description" + basicProduct1.getDescription());
+
     }
 }

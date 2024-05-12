@@ -19,5 +19,5 @@
 
 - Composite and Decorator have similar structure diagrams. Decorator is designed to let you add responsibilities to objects without subclassing. Composite's focus is not on embellishment but on representation.
 - Decorator and Proxy have different purposes but similar structures. Both describe how to provide a level of indirection to another object, and the implementations keep a reference to the object to which they forward requests.
-- 
+
 
