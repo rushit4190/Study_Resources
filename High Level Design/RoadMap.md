@@ -2,6 +2,8 @@
 
   * #### [System Architectural Patterns](theory/System%20Architectural%20Patterns.md)
 
+  * #### [Operating Systems](theory/Operating%20Systems.md)
+
   * #### [Networking](theory/Networking,%20APIs%20and%20Security.md)
 
   * #### [Scalability and Performance](theory/Scalability%20and%20Performance.md)

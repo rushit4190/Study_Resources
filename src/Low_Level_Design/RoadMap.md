@@ -4,6 +4,6 @@
 
 * #### [UML](UML)
 
-* #### [Design Patterns](Design_Patterns%2FREADME.md)
+* #### [Design Patterns](Design_Patterns/README.md)
 
 * #### LLD Practice questions
