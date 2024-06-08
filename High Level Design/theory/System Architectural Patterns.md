@@ -188,7 +188,7 @@ Let's discuss some microservices best practices:
 - Data storage should be private to the service that owns the data
 - Avoid coupling between services. Causes of coupling include shared database schemas and rigid communication protocols.
 - Decentralize everything. Individual teams are responsible for designing and building services. Avoid sharing code or data schemas.
-- Fail fast by using a [circuit breaker]() to achieve fault tolerance.
+- Fail fast by using a circuit breaker to achieve fault tolerance.
 - Ensure that the API changes are backward compatible.
 
 ### Pitfalls

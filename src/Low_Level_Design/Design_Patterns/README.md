@@ -1,10 +1,10 @@
 
 
-* [Creational Design Patterns](../../Low_Level_Design/Design_Patterns/Creational)
+* [Creational Design Patterns](Creational%2Fcreational.md)
 
-* [Structural Design Patterns](../../Low_Level_Design/Design_Patterns/Structural)
+* [Structural Design Patterns](Structural%2Fstructural.md)
 
-* [Behavioral Design Patterns](../../Low_Level_Design/Design_Patterns/Behavioral)
+* [Behavioral Design Patterns](Behavioral%2Fbehavioral.md)
 
 
 ##### References
