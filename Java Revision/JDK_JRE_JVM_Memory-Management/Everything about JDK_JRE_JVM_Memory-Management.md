@@ -518,6 +518,8 @@ JVM can choose the type of GC based on the underlying hardware. Programmers can 
 - When we create a String object using the new() operator, it always creates a new object in heap memory. On the other hand, if we create an object using String literal syntax e.g. “Baeldung”, it may return an existing object from the String pool, if it already exists. Otherwise, it will create a new String object and put in the string pool for future re-use.
 - Use String literal wherever possible.
 
+**Some points to remember about strings**
+
 - The reason String are immutable in Java is to support the memory storage of Strings in String Constant Pool.
 - Java String Pool allows caching of string, provides reusability, reduces memory usage.
 - From Java 7 onwards, the Java String Pool is stored in the Heap space, which is garbage collected by the JVM. The advantage of this approach is the reduced risk of `OutOfMemory` error because unreferenced Strings will be removed from the pool, thereby releasing memory.
