@@ -2,7 +2,7 @@
 
 
 
-* #### [Everything about JDK_JRE_JVM](JDK_JRE_JVM)
+* #### [Everything about JDK_JRE_JVM_Memory-Management](JDK_JRE_JVM_Memory-Management)
 * #### [Access Modifiers](Access_Modifiers)
 * #### [Keywords](Keywords)
 * #### [Variables_Methods_Classes](Variables_Methods_Classes)
