@@ -11,10 +11,7 @@
     * [Java Heap's Components](#java-heaps-components)
     * [Garbage Collection Process and Types](#garbage-collection-process-and-types)
     * [Memory Issues like Memory Leaks and Performance Optimization Techniques](#memory-issues-like-memory-leaks-and-performance-optimization-techniques)
-    * [Memory Leaks](#memory-leaks)
-    * [Performance Optimization techniques:](#performance-optimization-techniques)
     * [How are Strings stored in Heap](#how-are-strings-stored-in-heap)
-
 
 <!-- TOC end -->
 
@@ -435,7 +432,7 @@ JVM can choose the type of GC based on the underlying hardware. Programmers can 
 - Memory issues in Java can have symptoms such as excessive memory usage, where the heap grows abnormally as the Java application runs. 
 - The application may also become sluggish due to an underlying memory issue (such as inadequate heap allocation or memory leak), requiring the garbage collector to run frequently.
 
-## Memory Leaks
+### Memory Leaks
 
 - Memory leaks occur due to unintentional object references that are erroneously kept in the application even when they are no longer required. This prevents those objects from being garbage collected. Slowly, the accidental leak grows over time and occupies a significant portion of the heap space. This, in turn, forces the garbage collector to run frequently, and the application may crash with the exception: `OutOfMemoryError`.
 - Leaks can also occur due to circular references between objects or poor thread management. Circular references happen when two or more objects reference each other. They then form a loop that blocks them from being garbage-collected.
@@ -445,8 +442,9 @@ JVM can choose the type of GC based on the underlying hardware. Programmers can 
 - The class loader–related memory issue may arise when duplicate classes are loaded by multiple `ClassLoader` instances. This usually arises with multiple deployments on the application server when classes are not unloaded during the undeploy process.
 - Occasionally, this issue may also occur if the size specified by the JVM parameter `MaxMetaspaceSize` is lower than the application requirement.
 
+for further reading : https://www.baeldung.com/java-memory-leaks
 
-## Performance Optimization techniques:
+### Performance Optimization techniques:
 
 - Explicitly refer to `null` obsolete references after use. That will make objects those refer to eligible for garbage collecting.
 - Avoid `finalizers`. They slow down the process, and they do not guarantee anything. Prefer phantom references for cleanup work.

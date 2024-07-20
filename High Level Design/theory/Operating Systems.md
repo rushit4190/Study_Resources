@@ -1,4 +1,5 @@
-
+https://www.baeldung.com/cs/concurrency-vs-parallelism
+https://www.geeksforgeeks.org/difference-between-concurrency-and-parallelism/#google_vignette
 
 
 # Basics of OS

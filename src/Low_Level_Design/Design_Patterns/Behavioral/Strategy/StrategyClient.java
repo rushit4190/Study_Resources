@@ -4,6 +4,8 @@ package Low_Level_Design.Design_Patterns.Behavioral.Strategy;
 
 // Context class
 
+import java.util.LinkedList;
+
 class NavigationApp {
     private RouteStrategy routeStrategy;
 
@@ -29,6 +31,7 @@ class FastestRouteStrategy implements RouteStrategy {
     public void calculateRoute(String source, String destination) {
         System.out.println("Calculating fastest route from " + source + " to " + destination);
         // Logic for calculating fastest route
+
     }
 }
 

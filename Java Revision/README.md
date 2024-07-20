@@ -10,7 +10,7 @@
 * #### [Interfaces_Lambdas](Interfaces_Lambdas)
 * #### [Collections_Framework](Collections_Framework)
 * #### [Stream API](Stream%20API)
-* #### [Concurrency](Concurrency)
+* #### [Concurrency](Concurrency_and_Multithreading)
 * #### [Java 8+ features](Java%208%2B%20features)
 * #### [Java Networking & JDBC](Java%20Networking%20%26%20JDBC)
 * #### [Input/Output Operations](Input_Output_Operations)
