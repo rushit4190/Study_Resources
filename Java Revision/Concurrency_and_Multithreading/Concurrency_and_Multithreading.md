@@ -618,6 +618,7 @@ thread.start();
 - Inter-Thread Communication (Cooperation) is a mechanism that enables threads of a process to exchange information or coordinate their execution, thus work together to solve a common problem or to share resources.
 - Polling is the process of continually testing a condition until it becomes true, usually done with the use of multiple loops which determines whether a condition is true or false. However, because this method uses numerous CPU cycles, it is wasteful, and hence ITC is imp.
 - To avoid polling, Java provides three methods. These are the wait(), notify(), and notifyAll methods(). Because these methods are in the object class and are marked as final, they can be used in any class. They can only be utilized inside a synchronized block.
+- The `java.util.concurrent` package provides higher-level constructs such as locks, semaphores, and condition variables to facilitate inter-thread communication and synchronization.
 
 **1. wait()** 
 
@@ -657,25 +658,1107 @@ thread.start();
 
 - https://www.baeldung.com/java-thread-stop
 
+**yield() :**
+
+- As the official documentation suggests, Thread.yield() provides a mechanism to inform the “scheduler” that the current thread is willing to relinquish its current use of processor but it’d like to be scheduled back soon as possible.
+- The “scheduler” is free to adhere or ignore this information and in fact, has varying behavior depending upon the operating system.
+- Some of the usecase for yield() include designing concurrency control constructs, improving system responsiveness in a compute-heavy program etc.
 
 
-Synchronization in Java
-Volatile keyword
-CPU Cache coherence
-Java Virtual Threads
-Race Conditions and Critical Sections
-Thread Safety and shared resources
+- Thread interrupt - https://www.geeksforgeeks.org/interrupting-a-thread-in-java/
+
+
+## Thread Joining
+
+- The join() method is defined in Thread class throws Interrupted exception.
+- When we invoke the join() method on a thread, the calling thread goes into a waiting state. It remains in a waiting state until the referenced thread terminates. (th.join() -> th is referenced thread)
+- By looking at the Java source code: calling t2.join() from t1 will make t1 wait on t2 object (t2 is a Thread, which is a subclass of Object). The wait will be forever as long as t1 is alive. When t2 thread finishes its work, it will call Object.notifyAll() so t1 awakens.
+- If the referenced thread was already terminated or hasn’t been started, the call to join() method returns immediately.
+- There are two overloaded methods of join() to handle the non-responsiveness issue of the method.
+
+```
+  “public final void join(long millis) throws InterruptedException
+  Waits at most millis milliseconds for this thread to die. A timeout of 0 means to wait forever.”
+  
+  “public final void join(long millis,intnanos) throws InterruptedException
+  Waits at most millis milliseconds plus nanos nanoseconds for this thread to die.”
+```
+
+```java
+
+  @Test
+  public void givenStartedThread_whenTimedJoinCalled_waitsUntilTimedout()
+    throws InterruptedException {
+      Thread t3 = new SampleThread(10);
+      t3.start();
+      t3.join(1000);
+      assertTrue(t3.isAlive());
+  }
+```
+
+- In this case, the calling thread waits for roughly 1 second for the thread t3 to finish. If the thread t3 does not finish in this time period, the join() method returns control to the calling method.
+- Timed join() is dependent on the OS for timing. So, we cannot assume that join() will wait exactly as long as specified.
+- join() creates a happens-before relationship:
+  - “All actions in a thread happen-before any other thread successfully returns from a join() on that thread.”
+  - This means that when a thread t1 calls t2.join(), all changes done by t2 are visible in t1 on return. However, if we do not invoke join() or use other synchronization mechanisms, we do not have any guarantee that changes in the other thread will be visible to the current thread even if the other thread has been completed.
+
+## Thread Safety and shared resources, Synchronization in Java
+
+- A class and its public APIs are labelled as thread safe if multiple threads can consume the exposed APIs without causing race conditions or state corruption (shared resource) or unpredictable results for the class.
+- Note that composition of two or more thread-safe classes doesn't guarantee the resulting type to be thread-safe.
+- Even if the use of an object is thread safe, if that object points to a shared resource like a file or database, the application as a whole may not be thread safe. For instance, if thread 1 and thread 2 each create their own database connections, connection 1 and connection 2, the use of each connection itself is thread safe. But the use of the database the connections point to may not be thread safe.
+- Few methods achieve thread safety :
+
+
+**Stateless implementations:**
+
+- In most cases, errors in multithreaded applications are the result of incorrectly sharing state between several threads.
+- Consider the following:
+
+```java
+  public class MathUtils {
+      
+      public static BigInteger factorial(int number) {
+          BigInteger f = new BigInteger("1");
+          for (int i = 2; i <= number; i++) {
+              f = f.multiply(BigInteger.valueOf(i));
+          }
+          return f;
+      }
+  }
+
+```
+
+- The factorial() method is a stateless deterministic function. Given a specific input, it always produces the same output.
+- The method neither relies on external state nor maintains state at all.
+- All threads can safely call the factorial() method and will get the expected result without interfering with each other and without altering the output that the method generates for other threads.
+
+**Immutable Implementations:**
+
+- If we need to share state between different threads, we can create thread-safe classes by making them immutable.
+- A class instance is immutable when its internal state can’t be modified after it has been constructed.
+- The easiest way to create an immutable class in Java is by declaring all the fields private and final and not providing setters:
+
+```java
+
+public class MessageService {
+    
+    private final String message;
+
+    public MessageService(String message) {
+        this.message = message;
+    }
+    
+    // standard getter
+    
+}
+```
+- A MessageService object is effectively immutable since its state can’t change after its construction.
+- Moreover, if MessageService were actually mutable, but multiple threads only have read-only access to it, it’s thread-safe as well.
+
+**Using Thread-Local Fields**
+
+- The ThreadLocal construct allows to store data that will be accessible only by a specific thread.
+
+```
+  ThreadLocal<Integer> threadLocalValue = new ThreadLocal<>();
+```
+- Next, to use this value from a thread, only need to call a get() or set() method. Simply put, imagine that ThreadLocal stores data inside of a map with the thread as the key.
+- As a result, when get() method on the threadLocalValue is called, an Integer value for the requesting thread is returned.
+
+**Synchronized Collections**
+
+- To create thread-safe collections, a set of synchronization wrappers are included within collections framework.
+
+```
+  Collection<Integer> syncCollection = Collections.synchronizedCollection(new ArrayList<>());
+  Thread thread1 = new Thread(() -> syncCollection.addAll(Arrays.asList(1, 2, 3, 4, 5, 6)));
+  Thread thread2 = new Thread(() -> syncCollection.addAll(Arrays.asList(7, 8, 9, 10, 11, 12)));
+  thread1.start();
+  thread2.start();
+
+```
+
+- Synchronized collections use intrinsic locking in each method meaning the methods can be accessed by only one thread at a time, while other threads will be blocked until the method is unlocked by the first thread.
+
+**Concurrent Collections**
+
+- Java provides the java.util.concurrent package, which contains several concurrent collections, such as ConcurrentHashMap:
+
+```
+  Map<String,String> concurrentMap = new ConcurrentHashMap<>();
+  concurrentMap.put("1", "one");
+  concurrentMap.put("2", "two");
+  concurrentMap.put("3", "three");
+
+```
+
+- Unlike their synchronized counterparts, concurrent collections achieve thread-safety by dividing their data into segments. In a ConcurrentHashMap, for example, several threads can acquire locks on different map segments, so multiple threads can access the Map at the same time.
+- Concurrent collections are much more performant than synchronized collections, due to the inherent advantages of concurrent thread access.
+- It’s worth mentioning that synchronized and concurrent collections only make the collection itself thread-safe and not the contents.
+
+**Using Atomic Objects :**
+
+- It’s also possible to achieve thread-safety using the set of atomic classes that Java provides, including AtomicInteger, AtomicLong, AtomicBoolean and AtomicReference.
+- Atomic classes allow us to perform atomic operations, which are thread-safe, without using synchronization. 
+- An atomic operation is executed in one single machine-level operation.
+
+**Volatile Fields :**
+
+- Suppose a thread is working with a field variable named counter. It is possible that the thread keeps a copy of the counter in CPU core's cache for faster manipulation rather than keeping it in main memory.
+- The JVM will decide when to update the main memory with the value of the counter, even though other threads may read the value of the counter from the main memory and may end up reading a stale value.
+- If a variable is declared volatile then whenever a thread writes or reads to the volatile variable, JVM and the compiler are instructed to store the counter variable in the main memory. That way, every time the thread reads the value of the counter variable, it will actually read it from the main memory, instead of from the CPU cache. Likewise, every time the thread writes to the counter variable, the value will be written to the main memory.
+- Moreover, the use of a volatile variable ensures that all variables that are visible to a given thread will be read/write from/to the main memory as well.
+
+```java
+  public class User {
+  
+      private String name;
+      private volatile int age;
+  
+      // standard constructors / getters
+      
+  }
+```
+
+- Each time the JVM writes the `age` volatile variable to the main memory, it will write the non-volatile name variable to the main memory as well. This assures that the latest values of both variables are stored in the main memory, so consequent updates to the variables will automatically be visible to other threads. Same is for read operation.
+- This extended guarantee that volatile variables provide is known as the full volatile visibility guarantee.
+- If there's a single thread that writes to the volatile variable and other threads only read the volatile variable then just using volatile is enough, however, if there's a possibility of multiple threads writing to the volatile variable then "synchronized" would be required to ensure atomic writes to the variable.
+
+**Synchronized methods :**
+
+- By prefixing the method signature with the synchronized keyword.
+- Only one thread can access a synchronized method at a time, while blocking access to this method from other threads. Other threads will remain blocked until the first thread finishes or the method throws an exception.
+- Synchronized methods rely on the use of “intrinsic locks” or “monitor locks.” An intrinsic lock is an implicit internal entity associated with a particular class instance. Each object in Java has an entity associated with it called the "monitor lock" or just monitor.
+- When a thread calls a synchronized method, it acquires the intrinsic lock. After the thread finishes executing the method, it releases the lock, which allows other threads to acquire the lock and get access to the method.
+- For static methods, the monitor will be the class object, which is distinct from the monitor of each instance of the same class.
+- If an uncaught exception occurs in a synchronized method, the monitor is still released.
+
+**Synchronized statements :**
+
+- Synchronizing the critical section in a method instead of the whole is better optimization.
+
+```
+  public void incrementCounter() {
+      // additional unsynced operations
+      synchronized(this) {
+          counter += 1;
+      }
+  }
+```
+
+- Unlike synchronized methods, synchronized statements must specify the object that provides the intrinsic lock, usually the this reference.
+- Using another object as monitor lock instead of this in synchronized block is good practice.
+
+```java
+public class ObjectLockCounter {
+
+    private int counter = 0;
+    private final Object lock = new Object();
+    
+    public void incrementCounter() {
+        synchronized(lock) {
+            counter += 1;
+        }
+    }
+    
+    // standard getter
+}
+```
+
+- Not only does this provide coordinated access to a shared resource in a multithreaded environment, but it also uses an external entity to enforce exclusive access to the resource.
+- This implementation is slightly better, as it promotes security at the lock level. (not the private final keyword)
+- When using other objects for intrinsic locking, the private entity lock is not accessible from the outside. This makes it harder for an attacker to acquire the lock and cause a deadlock.
+- Even though any Java object can be used as intrinsic Lock, Strings should be avoided for locking purposes. Suppose , two different classes have two different string object with equal value as their locks, due to string interning, these two “Lock” values may actually refer to the same object on the string pool. That is , both class would be sharing the same lock.
+- Similarly, any cacheable or reusable objects (eg, Integer.valueOf() method ches for small numbers) should be avoided as intrinsic locks.
+
+
+**Other methods for thread safety include using Reentrant Locks, Read/Write Locks**
+
+## Race Conditions and Critical Sections
+
+- Critical section is any piece of code that has the possibility of being executed concurrently by more than one thread of the application and exposes any shared data or resources used by the application for access.
+- Here the sequence of execution for the threads makes a difference in the result of the concurrent execution of the critical section.
+- When the result of multiple threads executing a critical section may differ depending on the sequence in which the threads execute, the critical section is said to contain a race condition. 
+- The threads "race" through the critical section to write or read shared resources and depending on the order in which threads finish the "race", the program result changes.
+- There are two common patterns of Race conditions:
+  - Check-then-act
+  - Read-Modify-Write
+
+**Check-then-act**
+
+- It’s defined by a program flow where a potentially stale observation is used to decide what to do next. We refer to the bugs produced by this condition as Time-of-check to time-of-use or TOCTOU bugs.
+- Lazy initialization is yet another example of a check-then-act pattern.
+
+
+```java
+  public class CheckThenActExample {
+
+  public void checkThenAct(Map<String, String> sharedMap) {
+    if(sharedMap.containsKey("key")){
+      String val = sharedMap.remove("key");
+      if(val == null) {
+        System.out.println("Value for 'key' was null");
+      }
+    } else {
+      sharedMap.put("key", "value");
+    }
+  }
+}
+```
+
+- If two or more threads call the checkThenAct() method on the same CheckThenActExample object, then two or more threads may execute the if-statement at the same time, evaluate sharedMap.containsKey("key") to true, and thus move into the body code block of the if-statement.
+- In there, multiple threads may then try to remove the key,value pair stored for the key "key", but only one of them will actually be able to do it. The rest will get a null value back, since another thread already removed the key,value pair.
+
+**Read - Modify - Write**
+
+- The read-modify-write pattern means, that two or more threads first read a given variable, then modify its value and write it back to the variable.
+- For this to cause a problem, the new value must depend one way or another on the previous value.
+
+```java
+
+  public class Counter {
+
+     protected long count = 0;
+
+     public void add(long value){
+         this.count = this.count + value;
+     }
+  }
+```
+
+- Imagine if two threads, A and B, are executing the add method on the same instance of the Counter class. There is no way to know when the operating system switches between the two threads. 
+- The code in the add() method is not executed as a single atomic instruction by the Java virtual machine.
+- Rather it is a set of smaller executions for each thread, with thread interleaving happening in between:
+  - Read this.count from main memory into CPU core register.
+  - Add value to register.
+  - Write register to memory.
+
+```
+       this.count = 0;
+
+   A:  Reads this.count into a register (0)
+   B:  Reads this.count into a register (0)
+   B:  Adds value 2 to register
+   B:  Writes register value (2) back to memory. this.count now equals 2
+   A:  Adds value 3 to register
+   A:  Writes register value (3) back to memory. this.count now equals 3
+
+```
+
+- Here, thread A wants to add 2  and thread B wants to add 3 to the count variable. So final answer should have been 5.
+- But since due thread interleaving and context switching, the result is different = 3.
+
+
+**Preventing Race Conditions**
+
+- Avoiding shared state
+- Using synchronizations and atomic operations
+
+
+## Producer-Consumer Problem
+
+(using blockingQueue)
+https://www.baeldung.com/java-producer-consumer-problem
+
+
+
+## CPU Cache coherence
+
+https://jenkov.com/tutorials/java-concurrency/cache-coherence-in-java-concurrency.html
+https://www.geeksforgeeks.org/cache-coherence/
+
+
+## Java Virtual Threads
+
+
+![java-virtual-threads-1.png](../../diagrams/java-virtual-threads-1.png)
+
+
+- Still a preview feature of Project Loom, Virtual threads are lightweight threads that greatly minimize the effort required to create, operate, and manage high volumes systems that are concurrent.
+- Java code is executed by a platform thread on its parent OS thread, and the platform thread captures its OS thread for the length of its lifetime. As a result, maximum number of platform threads running can only be to number of OS threads.
+- Platform threads are managed by operating system scheduler, so to create a new platform thread, which mostly requires a new OS thread creation, a system call is necessary, which is a costly operation.
+- Thread pools are mostly used to instead of allocating and deallocating threads. To scale by adding more threads, the context switching and their memory footprint associated results in significant cost of maintainance and also affects the processing time.
+- Usage of non-blocking I/O APIs and asynchronous APIs, may result of code clutter.
+- On the other hand, virtual threads are managed by JVM. Therefore, their allocation doesn’t require a system call, and they’re free of the operating system’s context switch.
+- As shown in the diagram, Java virtual threads - executed by platform threads - which are again executed by OS threads. While a platform thread can only execute a single virtual thread at a time, it has the ability to switch to executing a different virtual thread when the currently executed virtual thread makes a blocking call (e.g. network or concurrency data structure).
+- While the virtual thread is being executed by a platform thread - the virtual thread is said to be mounted to that thread. New virtual threads are queued up until a platform thread is ready to execute it. When a platform thread becomes ready, it will take a virtual thread and start executing it.
+- A virtual thread that executes some blocking network call (IO) will be unmounted from the platform thread while waiting for the response. In the meantime the platform thread can execute another virtual thread.
+- There is no time slicing happening between virtual threads. In other words, the platform thread does not switch between executing multiple virtual threads - except in the case of blocking network calls. As long as a virtual thread is running code and is not blocked waiting for a network response - the platform thread will keep executing the same virtual thread. Additionally, calling a blocking operation on e.g. a BlockingQueue will also unmount the virtual thread.
+- However, if the virtual thread makes a blocking file system call - that does not unmount the virtual thread. During file system calls the virtual thread remains pinned to the platform thread. That means, that the platform thread cannot execute any other virtual thread while it waits for a response from the file system. The Java virtual thread system may compensate for that, though, by starting up another platform thread to run other virtual threads being started while the file system call is going on.
+- There are other situations that may currently pin a virtual thread to a platform thread. For instance, entering a synchronized block. If the virtual thread makes a blocking network call from inside a synchronized block, the virtual thread may also remain pinned to the platform thread.
+- Virtual threads have a limited call stack and can only execute one HTTP client call or JDBC query. They are suitable for delayed operations, but not for extended CPU-intensive tasks.
+- Server applications often handle large numbers of client requests, which requires blocking I/O tasks such as resource access. This makes server applications high-throughput. Use virtual threads in applications where there are many concurrent processes that take a long time to finish.
+
+**Advantages :**
+
+- Increases the availability of applications
+- Enhances application throughput.
+- Reduces the occurrence of ‘OutOfMemoryError: Unable to Create New Native Thread’.
+- Reduces the amount of memory used by the application
+- Enhances code quality
+
+
+
+**How to create virtual thread ?**
+
+- Using the Thread Class and the Thread.Builder Interface to Create a Virtual Thread
+
+```java
+  
+  // Java program to demonstrate exchange 
+  // Data between threads using scoped values 
+  import java.util.*; 
+  
+  //Driver class 
+  public class VirtualThreadExample { 
+      // main function 
+      public static void main(String[] args) { 
+          try { 
+              
+              // Initialization of thread 
+              Thread.Builder builder = Thread.ofVirtual().name("GFG Thread"); 
+  
+              Runnable task = () -> { 
+                  System.out.println("Running thread"); 
+              }; 
+  
+              Thread t = builder.start(task); 
+  
+              System.out.println("Thread t name: " + t.getName()); 
+  
+              // Add a delay to allow the virtual thread to run 
+              // Sleep for 1 second 
+              Thread.sleep(1000); 
+  
+              // Wait for the thread to complete 
+              t.join(); 
+          } catch (InterruptedException e) { 
+              e.printStackTrace(); 
+          }
+  
+      }
+  } 
+
+```
+- Creating and executing a virtual thread with the Executors.newVirtualThreadPerTaskExecutor() Method
+- One can separate the creation and management of threads from other software components by using executors.
+
+```java
+  // Java Program for Creating and executing 
+  // Virtual thread with the 
+  // Executors.newVirtualThreadPerTaskExecutor() Method 
+  import java.util.concurrent.ExecutionException; 
+  import java.util.concurrent.ExecutorService; 
+  import java.util.concurrent.Executors; 
+  import java.util.concurrent.Future; 
+  
+  public class VirtualThreadExecutorExample { 
+      public static void main(String[] args) { 
+          try (ExecutorService myExecutor = Executors.newVirtualThreadPerTaskExecutor()) { 
+              // Submit a task that prints a message 
+              Future<?> future = myExecutor.submit(() -> System.out.println("Running thread")); 
+  
+              // Wait for the task to complete 
+              future.get(); 
+  
+              System.out.println("Program Completed !!"); 
+          } catch (InterruptedException | ExecutionException e) { 
+              e.printStackTrace(); 
+          } 
+      } 
+  } 
+
+
+```
+
+- The Executors.newVirtualThreadPerTaskExecutor() function is used in the example above to build the ExecutorService. To complete the work, a new virtual thread is generated and launched when one uses ExecutorService.submit(Runnable). 
+- A Future instance is returned by this method. It’s important to note that the Future.get() function waits for the thread to complete its task.
+- The code submits a basic task that prints a message and then uses future to wait for the task to finish using an ExecutorService with a virtual thread per task.fetch(). It prints “GeeksForGeeks” to signify that the task has been finished after it is finished.
+
+
+#  Atomic Operations
+
+- Using locks solves the problem of accessing shared mutable objects in a concurrent environment, but the performance of the system takes a hit.
+- When multiple threads attempt to acquire a lock, one of them wins, while the rest of the threads are either blocked or suspended. The process of suspending and then resuming a thread is very expensive and affects the overall efficiency of the system.
+- Atomic operations(non-dividable) are an alternative. Atomic operations are those operations that ALWAYS execute together. If an operation is atomic, then it cannot be partially complete, either it will be complete, or not start at all, but will not be incomplete.
+
+## Compare-and-Swap Operations
+
+- Non-blocking algorithms for concurrent environments exploit low-level atomic machine instructions such as compare-and-swap (CAS), to ensure data integrity.
+- At its core, CAS is a crucial atomic operation that allows for the modification of a shared variable in a thread-safe manner. The operation involves three parameters: a memory location (address), an expected value, and a new value.
+- The approach is to compare the actual value of the variable to the expected value of the variable and if the actual value matches the expected value, then swap the actual value of the variable for the new value passed in.
+- The process is as follows:
+  - The current value at the specified memory location is compared with the expected value.
+  - If the comparison yields a match, the new value is atomically written to the memory location.
+  - If the comparison fails, the operation is deemed unsuccessful, signaling that the value at the memory location has been modified by another thread.
+- When multiple threads attempt to update the same value through CAS, one of them wins and updates the value. However, unlike in the case of locks, no other thread gets suspended; instead, they’re simply informed that they did not manage to update the value. The threads can then proceed to do further work and context switches are completely avoided.
+- Consequence of CAS is, the core program logic becomes more complex because we have to handle the scenario when the CAS operation didn’t succeed. We can retry it again and again till it succeeds, or we can do nothing and move on depending on the use case.
+
+
+
+## AtomicInteger, AtomicLong, AtomicBoolean, AtomicReference
+
+- Objects of these classes represent the atomic variable of int, long, boolean, and object reference respectively. These classes contain the following methods:
+  - `get()` – gets the value from the memory, so that changes made by other threads are visible; equivalent to reading a volatile variable
+  - `incrementAndGet() / decrementAndGet()` – Atomically increments/decrements by one the current value
+  - `set(value)` – writes the value to memory, so that the change is visible to other threads; equivalent to writing a volatile variable
+  - `compareAndSet(expect, update)` - Atomically sets the value to the given updated value if the current value == the expected value (in case of AtomicReference, compares the reference not values, i.e it uses ==, not equals()), returns boolean.
+  - `lazySet()` - eventually writes the value to memory, maybe reordered with subsequent relevant memory operations. One use case is nullifying references, for the sake of garbage collection, which is never going to be accessed again. In this case, better performance is achieved by delaying the null volatile write.
+
+
+
+* Volatile vs Atomic variables
+  https://www.baeldung.com/java-volatile-vs-atomic
+
+# Locks and Semaphores
+
+https://www.baeldung.com/java-concurrent-locks
+
+- A locked instance should always be unlocked to avoid deadlock condition.
+- A recommended code block to use the lock should contain a try/catch and finally block:
+
+```
+  Lock lock = ...; 
+  lock.lock();
+  
+  try {
+      // access to the shared resource
+  } finally {
+      lock.unlock() // must release the lock in a finally block
+  }
+
+```
+
+
+
+## Difference between Locks and Synchronized blocks/methods
+
+- A synchronized block is fully contained within a method. We can have Lock APIs lock() and unlock() operation in separate methods.
+- A synchronized block doesn’t support the fairness. Any thread can acquire the lock once released, and no preference can be specified. We can achieve fairness within the Lock APIs by specifying the fairness property. It makes sure that the longest waiting thread is given access to the lock.
+- A thread gets blocked if it can’t get an access to the synchronized block. The Lock API provides tryLock() / tryLock(timeout) methods. The thread acquires lock only if it’s available and not held by any other thread. This reduces blocking time of thread waiting for the lock.
+- A thread that is in “waiting” state to acquire the access to synchronized block can’t be interrupted. The Lock API provides a method lockInterruptibly() that can be used to interrupt the thread when it’s waiting for the lock.
+
+
+## Lock Interface
+
+- The Lock interface provides a tool for implementing mutual exclusion that is more flexible and capable than synchronized methods and statements. A single thread is allowed to acquire the lock and gain access to a shared resource, however, some implementing classes such as the ReentrantReadWriteLock allow multiple threads concurrent access to shared resource.
+- The Lock interface has the following classes implementing it:
+
+  *   ReentrantLock
+  *   ReentrantReadWriteLock.ReadLock
+  *   ReentrantReadWriteLock.WriteLock
+
+
+**ReentrantLock**
+
+- Reentrancy in locking is an important concept in Java concurrency that allows a thread to acquire a lock that it already holds multiple times, without causing a deadlock or blocking itself. It is important to note that, reentrant lock has to be unlocked equal no of times as it has been locked.
+- Lock and ReadWriteLock class instance are not reentrant. On calling lock() more than one time on a Lock class object will put the thread in blocked state.
+- Synchronized blocks/methods are reentrant in nature.
+- ReentrantLock class implements the Lock interface. It offers the same concurrency and memory semantics as the implicit monitor lock accessed using synchronized methods and statements, with extended capabilities.
+- The reentrant behavior of the lock allows recursively locking by the already owning thread, however, the lock supports a maximum of 2147483647 locks by the same thread.
+
+
+```java
+  import java.util.concurrent.ExecutorService;
+  import java.util.concurrent.Executors;
+  import java.util.concurrent.Future;
+  import java.util.concurrent.locks.Lock;
+  import java.util.concurrent.locks.ReentrantLock;
+  
+  class Demonstration {
+      public static void main( String args[] ) throws Exception {
+  
+          ExecutorService es = Executors.newFixedThreadPool(5);
+          ReentrantLock lock = new ReentrantLock();
+          Runnable threadA = new Runnable() {
+              @Override
+              public void run() {
+                  threadA(lock);
+              }
+          };
+  
+          Runnable threadB = new Runnable() {
+              @Override
+              public void run() {
+                  threadB(lock);
+              }
+          };
+  
+          try {
+              lock.lock();
+              lock.lock();
+              lock.lock();
+  
+              System.out.println("Main thread lock hold count = " + lock.getHoldCount());
+  
+              // submit other threads
+              Future future1 = es.submit(threadA);
+              Future future2 = es.submit(threadB);
+  
+              // release locks slowly
+              for (int i = 0; i < 3; i++) {
+                  Thread.sleep(50);
+                  lock.unlock();
+              }
+  
+              System.out.println("Main thread released lock. Lock hold count = " + lock.getHoldCount());
+              future1.get();
+              future2.get();
+          } finally {
+              // Make sure to release the locks if an exception occurs
+              for (int i = 0; i < lock.getHoldCount(); i++) {
+                  lock.unlock();
+              }
+  
+              // Shutdown the executor service
+              es.shutdown();
+          }
+      }
+  
+      static void threadB(Lock lock) {
+          lock.lock();
+          lock.unlock();
+      }
+  
+      static void threadA(ReentrantLock lock) {
+  
+          String name = "THREAD-A";
+          Thread.currentThread().setName(name);
+          boolean keepTrying = true;
+  
+          System.out.println("Is lock owned by any other thread = " + lock.isLocked());
+  
+          while (keepTrying) {
+              System.out.println(name + " trying to acquire lock");
+  
+      
+              if (lock.tryLock()) {
+                  try {
+                      System.out.println(name + " acquired lock");
+                      keepTrying = false;
+                  } finally {
+                      lock.unlock();
+                      System.out.println(name + " released lock");
+                  }
+              } else {
+                  System.out.println(name + " failed to acquire lock. Other threads waiting = " + lock.getQueueLength());
+              }
+  
+              try {
+                  Thread.sleep(20);
+              } catch (InterruptedException ie) {
+                  // ignore exception.
+              }
+          }
+      }    
+  }
+```
+
+- Output :
+
+```
+  Main thread lock hold count = 3
+  Is lock owned by any other thread = true
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 0
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 1
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 1
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 1
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 1
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 1
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 1
+  THREAD-A trying to acquire lock
+  THREAD-A failed to acquire lock. Other threads waiting = 1
+  Main thread released lock. Lock hold count = 0
+  THREAD-A trying to acquire lock
+  THREAD-A acquired lock
+  THREAD-A released lock
+```
+
+- Reentrant Locks also offer a fairness parameter, by which the lock would abide by the order of the lock request i.e. after a thread unlocks the resource, the lock would go to the thread which has been waiting for the longest time. This fairness mode is set up by passing true to the constructor of the lock.
+- The fairness parameter used to construct the lock object decreases the throughput of the program.
+
+**ReadWriteLock**
+
+- The ReadWriteLock interface is part of Java’s java.util.concurrent.locks package, with ReentrantReadWriteLock only class implementing it.
+- The ReadWriteLock interface provides two methods for acquiring locks:
+  - The readLock() method returns a Lock object that can be used to acquire a read lock. If no thread acquired the write lock or requested for it, multiple threads can acquire the read lock.
+  - The writeLock() method returns a Lock object that can be used to acquire a write lock. If no threads are reading or writing, only one thread can acquire the write lock.
+- Internally, there are two locks to guard for read and write accesses. ReentrantReadWriteLock can help improve concurrency over using a mutual exclusion lock as it allows multiple reader threads to read concurrently. However, whether an application will truly realize concurrency improvements depends on other factors such as:
+  - Running on multiprocessor machines.
+  - Frequency of reads and writes. Generally, ReadWriteLock can improve concurrency in scenarios where read operations occur frequently and write operations are infrequent. If write operations happen often then most of the time is spent with the lock acting as a mutual exclusion lock.
+  - Contention for data, i.e. the number of threads that try to read or write at the same time.
+  - Duration of the read and write operations. If read operations are very short then the overhead of locking ReadWriteLock versus a mutual exclusion lock can be higher.
+- The ReentrantReadWriteLock can also be operated in the fair mode, which grants entry to threads in an approximate arrival order. The longest waiting writer thread or a group of longest waiting reader threads is given preference to acquire the lock when it becomes free. In case of reader threads we consider a group since multiple reader threads can acquire the lock concurrently.
+
+```java
+  
+  import java.util.HashMap;
+  import java.util.Random;
+  import java.util.concurrent.ExecutorService;
+  import java.util.concurrent.Executors;
+  import java.util.concurrent.Future;
+  import java.util.concurrent.locks.ReadWriteLock;
+  import java.util.concurrent.locks.ReentrantReadWriteLock;
+  
+  class Demonstration {
+  
+      static Random random = new Random();
+      static boolean isDataFresh = true;
+  
+      public static void main( String args[] ) throws Exception {
+          ExecutorService es = Executors.newFixedThreadPool(15);
+  
+          // cache
+          HashMap<String, Object> cache = new HashMap<>();
+          ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  
+          // put some data in the cache
+          cache.put("key", -1);
+  
+          Runnable writerTask = new Runnable() {
+              @Override
+              public void run() {
+                  writerThread(lock);
+              }
+          };
+  
+          Runnable readerTask = new Runnable() {
+              @Override
+              public void run() {
+                  readerThread(cache, lock);
+              }
+          };
+  
+          try {
+              Future future1 = es.submit(writerTask);
+              Future future2 = es.submit(readerTask);
+              Future future3 = es.submit(readerTask);
+              Future future4 = es.submit(readerTask);
+  
+              future1.get();
+              future2.get();
+              future3.get();
+              future4.get();
+          } finally {
+              es.shutdown();
+          }
+      }
+  
+      static void writerThread(ReadWriteLock lock) {
+  
+          for (int i = 0; i < 9; i++) {
+              try {
+                  Thread.sleep(random.nextInt(50));
+              } catch (InterruptedException ie) {
+                  // ignore
+              }
+  
+              lock.writeLock().lock();
+              System.out.println("Acquired write lock");
+              isDataFresh = false;
+              lock.writeLock().unlock();
+          }
+      }
+  
+      static void updateData(HashMap<String, Object> cache) {
+          cache.put("key", random.nextInt(1000));
+          isDataFresh = true;
+      }
+  
+      static void readerThread(HashMap<String, Object> cache, ReadWriteLock lock) {
+  
+          for (int i = 0; i < 3; i++) {
+              try {
+                  Thread.sleep(random.nextInt(50));
+              } catch (InterruptedException ie) {
+                  // ignore
+              }
+  
+              // acquire the read lock to check if data is fresh before
+              // reading from the cache
+              lock.readLock().lock();
+  
+              try {
+                  // check if the data is fresh
+                  if (!isDataFresh) {
+  
+                      // release the read lock, before acquiring the write lock
+                      lock.readLock().unlock();
+  
+                      // acquire the write lock before triggering an update
+                      lock.writeLock().lock();
+  
+                      try {
+  
+                          // Check the flag again, the data might already have been refreshed by
+                          // another writer thread.
+                          if (!isDataFresh) {
+                              updateData(cache);
+                          }
+  
+                          // acquire read lock before releasing the write lock. This is an
+                          // example of downgrading from write -> read lock
+                          lock.readLock().lock();
+                      } finally {
+                          lock.writeLock().unlock();
+                      }
+                  }
+  
+                  System.out.println("Acquire read lock and reading key = " + cache.get("key"));
+  
+              } finally {
+                  lock.readLock().unlock();
+              }
+          }
+      }
+  }
+```
+
+- Output - Note it may vary, depends on the scheduler.
+
+```
+  Acquire read lock and reading key = -1
+  Acquire read lock and reading key = -1
+  Acquire read lock and reading key = -1
+  Acquire read lock and reading key = -1
+  Acquired write lock
+  Acquire read lock and reading key = 983
+  Acquire read lock and reading key = 983
+  Acquired write lock
+  Acquired write lock
+  Acquire read lock and reading key = 848
+  Acquire read lock and reading key = 848
+  Acquired write lock
+  Acquire read lock and reading key = 770
+  Acquired write lock
+  Acquired write lock
+  Acquired write lock
+  Acquired write lock
+  Acquired write lock
+```
+
+
+**StampedLock**
+
+- The StampedLock class is designed for use as an internal utility in the development of other thread-safe components. Its use relies on knowledge of the internal properties of the data, objects, and methods it protects.
+- The state of a StampedLock is defined by a version and mode. There are three modes the lock can be in:
+  - Writing
+  - Reading
+  - Optimistic Reading
+- On acquiring a lock, a stamp (long value) is returned that represents and controls access with respect to a lock state. The stamp can be used later on to release the lock or convert the existing acquired lock to a different mode.
+
+```java
+  public class StampedLockDemo {
+      Map<String,String> map = new HashMap<>();
+      private StampedLock lock = new StampedLock();
+  
+      public void put(String key, String value){
+          long stamp = lock.writeLock();
+          try {
+              map.put(key, value);
+          } finally {
+              lock.unlockWrite(stamp);
+          }
+      }
+  
+      public String get(String key) throws InterruptedException {
+          long stamp = lock.readLock();
+          try {
+              return map.get(key);
+          } finally {
+              lock.unlockRead(stamp);
+          }
+      }
+  }
+      public String readWithOptimisticLock(String key) {
+        long stamp = lock.tryOptimisticRead();
+        String value = map.get(key);
+      
+        if(!lock.validate(stamp)) {
+          stamp = lock.readLock();
+          try {
+            return map.get(key);
+          } finally {
+            lock.unlock(stamp);
+          }
+        }
+        return value;
+      }
+```
+
+- Multiple threads can acquire Read lock at the same time. While read lock is held by a reader thread, all attempts to acquire the write lock will be blocked.
+- When the write lock is held, all threads attempting to acquire the read lock will be blocked. Remember that the writeLock() is not re-entrant.
+- A thread can invoke the tryOptimisticRead() method which returns a non-zero value if the write lock isn’t exclusively locked. The thread can then proceed to read but once the thread reads the desired value it must validate if the lock wasn’t acquired for a write in the meanwhile. If validation returns true then the reader thread can safely assume that from the time it was returned a stamp from invoking the tryOptimisticRead() method till the time the thread validated the stamp, the lock hasn’t been acquired for writing and the data hasn’t changed.
+
+```java
+  class Demonstration {
+      public static void main( String args[] ) {
+          // create an instance of StampedLock
+          StampedLock stampedLock = new StampedLock();
+  
+          // try optimistic read
+          long stamp = stampedLock.tryOptimisticRead();
+  
+          // check for validation, prints true
+          System.out.println(stampedLock.validate(stamp));
+  
+          // acquire the write lock which will invalidate the previous stamp
+          stampedLock.writeLock();
+  
+          // check for validation, prints false
+          System.out.println(stampedLock.validate(stamp));
+      }
+  }
+
+```
+- https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/stampedlock
+
+**Semaphores in Java**
+
+- There are two constructors in Semaphore class.
+  - Semaphore(int num)   // num denotes number of permits
+  - Semaphore(int num, boolean how)  // how denotes waiting threads are granted a permit in the order in which they requested access.
+
+- `tryAcquire()` – return true if a permit is available immediately and acquire it otherwise return false, but acquire() acquires a permit and blocking until one is available
+- `release()` – release a permit
+- `availablePermits()` – return number of current permits available
+
+```java
+
+  class LoginQueueUsingSemaphore {
+  
+      private Semaphore semaphore;
+  
+      public LoginQueueUsingSemaphore(int slotLimit) {
+          semaphore = new Semaphore(slotLimit);
+      }
+  
+      boolean tryLogin() {
+          return semaphore.tryAcquire();
+      }
+  
+      void logout() {
+          semaphore.release();
+      }
+  
+      int availableSlots() {
+          return semaphore.availablePermits();
+      }
+  
+  }
+
+```
+
+
+
+**Lock and Condition Interface**
+
+- The Condition class provides the ability for a thread to wait for some condition to occur while executing the critical section.
+- This can occur when a thread acquires the access to the critical section but doesn’t have the necessary condition to perform its operation. For example, a reader thread can get access to the lock of a shared queue that still doesn’t have any data to consume.
+- Condition class provides await() and signal() in-place of traditional methods - wait() and notify(), notifyAll() .
+
+```java
+  
+  public class ReentrantLockWithCondition {
+  
+      Stack<String> stack = new Stack<>();
+      int CAPACITY = 5;
+  
+      ReentrantLock lock = new ReentrantLock();
+      Condition stackEmptyCondition = lock.newCondition();
+      Condition stackFullCondition = lock.newCondition();
+  
+      public void pushToStack(String item){
+          try {
+              lock.lock();
+              while(stack.size() == CAPACITY) {
+                  stackFullCondition.await();
+              }
+              stack.push(item);
+              stackEmptyCondition.signalAll();
+          } finally {
+              lock.unlock();
+          }
+      }
+  
+      public String popFromStack() {
+          try {
+              lock.lock();
+              while(stack.size() == 0) {
+                  stackEmptyCondition.await();
+              }
+              return stack.pop();
+          } finally {
+              stackFullCondition.signalAll();
+              lock.unlock();
+          }
+      }
+  }
+```
+
 
 # Advanced Multithreading and Java Concurrency Utilities
 
-Thread Pools
-Callable and Future Interface
-Fork/Join Framework
-ThreadLocal
-Executors and ExecutorService
-CompletableFuture
-ScheduledExecutorService
-CountDownLatch, CyclicBarrier, Phaser, and Exchanger
+## ThreadPools, Executors and ExecutorService, ThreadPoolExecutor, ScheduledExecutorService
+
+- A task is a logical unit of work (A database server handling client queries, server handling HTTP requests ) and can be represented by an object of a class implementing the Runnable interface.
+- In Java, the primary abstraction for executing logical tasks units is the Executor framework and not the Thread class. The classes in the Executor framework separate out: Task Submission and Task Execution.
+- The Executor interface forms the basis for the asynchronous task execution framework in Java.
+- Java offers three interfaces, which classes can implement to manage thread lifecycle. These are:
+  - Executor Interface
+  - ExecutorService
+  - ScheduledExecutorService
+- The Executor interface has a single execute() method to submit Runnable instances for execution.
+- ExecutorService interface has submit() method that accepts a Runnable or Callable.
+- Thread pools in Java are implementations of the Executor interface or any of its sub-interfaces. Thread pools allow us to decouple task submission and execution.
+- When we use a thread pool, we write our concurrent code in the form of parallel tasks and submit them for execution to an instance of a thread pool.
+- A thread pool consists of homogenous worker threads that are assigned to execute tasks. Once a worker thread finishes a task, it is returned to the pool and gets re-used. Usually, thread pools are bound to a queue from which tasks are dequeued for execution by worker threads.
+- A thread pool can be tuned for the size of the threads it holds. A thread pool may also replace a thread if it dies of an unexpected exception.
+- **Advantages of thread pool:**
+  - There's no latency when a request is received and processed by a thread because no time is lost in creating a thread. Threads are reused.
+  - The system will not go out of memory because threads are not created without any limits.
+  - Fine tuning the thread pool will allow us to control the throughput of the system. We can have enough threads to keep all processors busy but not so many as to overwhelm the system.
+- **Thread leakage :** If the thread pool class doesnt catch the exception arising from the thread, the thread will simply exit, reducing the size of the thread pool by one. If this repeats many times, then the pool would eventually become empty and no threads would be available to execute other requests.
+
+**Implementations of thread pools using factory methods of Executor interface** (represented as an instance of ExecutorService/ ThreadPoolExecutor)
+
+1. `Executors.newCachedThreadPool()` - This pool is unbounded and  will create new threads as required and use older ones when they become available. However, it'll terminate threads that remain idle for a certain configurable period of time to conserve memory.
+2. `Executors.newFixedThreadPool(int)` - This type of pool has a fixed number of threads and any number of tasks can be submitted for execution. Once a thead finishes a task, it can reused to execute another task from the queue.
+3. `Executors.newSingleThreadExecutor()` - This executor uses a single worker thread to take tasks off of queue and execute them. If the thread dies unexpectedly, then the executor will replace it with a new one.
+4. `Executors.newScheduledThreadPool(int)` - This pool can be used to execute tasks periodically or after a delay.
+
+- Executors can be made to shutdown either abruptly or gracefully. In general, the ExecutorService will not be automatically destroyed when there is no task to process. It will stay alive and wait for new work to do.
+- To properly shut down an ExecutorService, we have the shutdown() and shutdownNow() APIs.
+- The shutdownNow() method tries to destroy the ExecutorService immediately, but it doesn’t guarantee that all the running threads will be stopped at the same time. This method returns a list of tasks that are waiting to be processed.
+- The shutdown() method doesn’t cause immediate destruction of the ExecutorService. It will make the ExecutorService stop accepting new tasks and shut down after all running threads finish their current work.
+- It is recommended to use both of these methods combined with the awaitTermination() method.
+
+```
+  executorService.shutdown();
+  try {
+      if (!executorService.awaitTermination(800, TimeUnit.MILLISECONDS)) {
+          executorService.shutdownNow();
+      } 
+  } catch (InterruptedException e) {
+      executorService.shutdownNow();
+  }
+```
+
+Further readings - https://www.baeldung.com/java-executor-service-tutorial
+                - https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/threadpoolexecutor
+
+
+## Fork/Join Framework
+
+- Similar to ExecutorService, it provides tools to help speed up parallel processing by attempting to use all available processor cores. It accomplishes this through a divide and conquer approach.
+- The framework first “forks,” recursively breaking the task into smaller independent subtasks until they are simple enough to run asynchronously.
+- After that, the “join” part begins. The results of all subtasks are recursively joined into a single result. In the case of a task that returns void, the program simply waits until every subtask runs.
+- To provide effective parallel execution, the fork/join framework uses a pool of threads called the ForkJoinPool. This pool manages worker threads of type ForkJoinWorkerThread.
+- A prefconfigured version of it can be instantiated using the factory method Executors.newWorkStealingPool() .
+
+Reading- https://www.baeldung.com/java-fork-join
+
+
+## Callable and Future Interface
+
+  **Limitations of Runnable:**
+- The run() method of the Runnable interface is of type void and cannot return any values.
+- The Runnable interface doesn't allow to throw any checked exceptions (exceptions caught at compile time. Eg: Exception).
+- Callable interface overcomes these limitations. call() methods contains 'throws Exception' clause.
+
+
+- Unlike the Runnable, the Callable instance cannot be passed as an input while creating a thread. Instead, we must wrap it with a future (Eg. FutureTask) and pass it to the Thread class / executor. The Thread returns a future object , generic in nature, with the result produced by the Callable instance. ExecutorService / thread pools are usually preferred to submit callable tasks.
+
+**Future Interface**
+
+- The Future interface is used to represent the result of an asynchronous computation. This result will eventually appear in the Future after the processing is complete.
+- Long running methods are good candidates for asynchronous processing and the Future interface because we can execute other processes while we’re waiting for the task encapsulated in the Future to complete.
+- FutureTask is an implementation of Future and Runnable, it can wrap a callable or runnable object and in turn be submitted to an executor.
+- Methods available in Future interface:
+  - **public boolean cancel(boolean mayInterrupt):** Used to stop the task. It stops the task if it has not started. If it has started, it interrupts the task only if mayInterrupt is true.
+  - **public Object get() throws InterruptedException, ExecutionException:** Used to get the result of the task. If the task is complete, it returns the result immediately, otherwise it waits till the task is complete and then returns the result.
+  - **public boolean isDone():** Returns true if the task is complete and false otherwise
+
+```java
+// Java program to illustrate Callable and FutureTask 
+// for random number generation 
+import java.util.Random; 
+import java.util.concurrent.Callable; 
+import java.util.concurrent.FutureTask; 
+
+class CallableExample implements Callable 
+{ 
+
+public Object call() throws Exception 
+{ 
+	Random generator = new Random(); 
+	Integer randomNumber = generator.nextInt(5); 
+
+	Thread.sleep(randomNumber * 1000); 
+
+	return randomNumber; 
+} 
+
+} 
+
+public class CallableFutureTest 
+{ 
+public static void main(String[] args) throws Exception 
+{ 
+
+	// FutureTask is a concrete class that 
+	// implements both Runnable and Future 
+	FutureTask[] randomNumberTasks = new FutureTask[5]; 
+
+	for (int i = 0; i < 5; i++) 
+	{ 
+	Callable callable = new CallableExample(); 
+
+	// Create the FutureTask with Callable 
+	randomNumberTasks[i] = new FutureTask(callable); 
+
+	// As it implements Runnable, create Thread 
+	// with FutureTask 
+	Thread t = new Thread(randomNumberTasks[i]); 
+	t.start(); 
+	} 
+
+	for (int i = 0; i < 5; i++) 
+	{ 
+	// As it implements Future, we can call get() 
+	System.out.println(randomNumberTasks[i].get()); 
+
+	// This method blocks till the result is obtained 
+	// The get method can throw checked exceptions 
+	// like when it is interrupted. This is the reason 
+	// for adding the throws clause to main 
+	} 
+} 
+} 
+
+```
+
+
+
+## CompletableFuture
+- https://www.baeldung.com/java-completablefuture
+- 
+
+## ThreadLocal
+
+
+
+## CountDownLatch, CyclicBarrier, Phaser, and Exchanger
+
+## Non-Blocking synchronization
 
 # Concurrent Collections
 
@@ -688,18 +1771,6 @@ ConcurrentHashMap
 * PriorityBlockingQueue
 * COncurrent Modification Exception
 
-#  Atomic Variables
- * AtomicInteger, AtomicLong, and AtomicBoolean
- * AtomicReference and AtomicReferenceArray
- * Compare-and-Swap Operations
-
-## Locks and Semaphores
-
- * ReentrantLock
- * ReadWriteLock
- * StampedLock
- * Semaphores
- * Lock and Condition Interface
 
 ## Best Practices and Patterns
 * Thread Safety Best Practices
@@ -716,6 +1787,7 @@ ConcurrentHashMap
 * Race Conditions
 * False Sharing
 * Thread Congestion
+* Spurious Wakeups
 * Strategies for Avoiding Concurrency Issues
 
 ## Java 9+ features
