@@ -1750,13 +1750,47 @@ public static void main(String[] args) throws Exception
 
 ## CompletableFuture
 - https://www.baeldung.com/java-completablefuture
-- fkadkak
+- 
 
 ## ThreadLocal
+- The TheadLocal construct allows us to store data that will be accessible only by a specific thread.
+- get(), set(), remove() methods and withInitial() , a static method is exposed.
+```
+  ThreadLocal<Integer> threadLocal = ThreadLocal.withInitial(() -> 1);
+  threadLocal.remove();
+```
+- Conceptually, you can think of a ThreadLocal<T> variable as a map that contains mapping for each thread and its copy of the threadlocal variable or equivalently a Map<Thread, T>. Though this is not how it is actually implemented. Furthermore, the thread specific values are stored in the thread object itself and are eligible for garbage collection once a thread terminates (if no other references exist to the threadlocal value).
+- ThreadLocal variables get tricky when used with the executor service (threadpools) since threads don't terminate and are returned to the threadpool. So any threadlocal variables aren't garbage collected.
 
-
+```java
+class Demonstration {
+    public static void main( String args[] ) throws Exception{
+        UnsafeCounter usc = new UnsafeCounter();
+        Thread[] tasks = new Thread[100];
+        for (int i = 0; i < 100; i++) {
+            Thread t = new Thread(() -> {
+                for (int j = 0; j < 100; j++)
+                    usc.increment();
+                System.out.println(usc.counter.get());
+            });
+tasks[i] = t;
+t.start(); }
+        for (int i = 0; i < 100; i++) {
+            tasks[i].join();
+}
+        System.out.println(usc.counter.get());
+    }
+}
+class UnsafeCounter {
+    ThreadLocal<Integer> counter = ThreadLocal.withInitial(() -> 0);
+    void increment() {
+        counter.set(counter.get() + 1);
+} }
+```
 
 ## CountDownLatch, CyclicBarrier, Phaser, and Exchanger
+
+- 
 
 ## Non-Blocking synchronization
 
