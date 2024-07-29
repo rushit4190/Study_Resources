@@ -1750,7 +1750,7 @@ public static void main(String[] args) throws Exception
 
 ## CompletableFuture
 - https://www.baeldung.com/java-completablefuture
-- 
+- fkadkak
 
 ## ThreadLocal
 
