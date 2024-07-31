@@ -1,21 +1,69 @@
-https://www.youtube.com/watch?v=TpYIcJN9EV8&t=29s
-https://jenkov.com/tutorials/java-concurrency/index.html
-https://github.com/bharadwaj221/edu.io/tree/master/Java%20Multithreading%20for%20Senior%20Engineering%20Interviews%20-%20Learn%20Interactively
-https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
+<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
+
+- [Introduction to Concurrency](#introduction-to-concurrency)
+  * [Program vs Process vs Thread](#program-vs-process-vs-thread)
+  * [Concurrency vs Parallelism](#concurrency-vs-parallelism)
+  * [Preemptive multitasking vs Cooperative multitasking](#preemptive-multitasking-vs-cooperative-multitasking)
+  * [Synchronous vs Asynchronous execution](#synchronous-vs-asynchronous-execution)
+  * [CPU Bound vs I/O Bound Programs](#cpu-bound-vs-io-bound-programs)
+  * [Throughput and Latency](#throughput-and-latency)
+  * [Context Switching](#context-switching)
+  * [Multithreading : Definition, Benefits and Cost](#multithreading-definition-benefits-and-cost)
+  * [Concurrency Models](#concurrency-models)
+  * [Same-Threading, Single-Threaded Concurrency](#same-threading-single-threaded-concurrency)
+  * [Mutex vs Semaphore vs Monitor](#mutex-vs-semaphore-vs-monitor)
+  * [Amdahls law and Moores Law](#amdahls-law-and-moores-law)
+- [Java Memory Model for Threads](#java-memory-model-for-threads)
+  * [User Thread vs Kernel Thread](#user-thread-vs-kernel-thread)
+  * [The "happens before relationship" model](#the-happens-before-relationship-model)
+- [Basics of Java Multithreading](#basics-of-java-multithreading)
+  * [Thread Creation](#thread-creation)
+  * [Thread Lifecycle and States](#thread-lifecycle-and-states)
+  * [InterThread Communication](#interthread-communication)
+  * [Thread Joining](#thread-joining)
+  * [Thread Safety and shared resources, Synchronization in Java](#thread-safety-and-shared-resources-synchronization-in-java)
+  * [Race Conditions and Critical Sections](#race-conditions-and-critical-sections)
+  * [Producer-Consumer Problem](#producer-consumer-problem)
+  * [CPU Cache coherence](#cpu-cache-coherence)
+  * [Java Virtual Threads](#java-virtual-threads)
+- [Atomic Operations](#atomic-operations)
+  * [Compare-and-Swap Operations](#compare-and-swap-operations)
+  * [AtomicInteger, AtomicLong, AtomicBoolean, AtomicReference](#atomicinteger-atomiclong-atomicboolean-atomicreference)
+- [Locks and Semaphores](#locks-and-semaphores)
+  * [Difference between Locks and Synchronized blocks/methods](#difference-between-locks-and-synchronized-blocksmethods)
+  * [Lock Interface](#lock-interface)
+- [Advanced Multithreading and Java Concurrency Utilities](#advanced-multithreading-and-java-concurrency-utilities)
+  * [ThreadPools, Executors and ExecutorService, ThreadPoolExecutor, ScheduledExecutorService](#threadpools-executors-and-executorservice-threadpoolexecutor-scheduledexecutorservice)
+  * [Fork/Join Framework](#forkjoin-framework)
+  * [Callable and Future Interface](#callable-and-future-interface)
+  * [CompletableFuture](#completablefuture)
+  * [ThreadLocal](#threadlocal)
+  * [CountDownLatch, CyclicBarrier, Phaser, and Exchanger](#countdownlatch-cyclicbarrier-phaser-and-exchanger)
+  * [Non-Blocking synchronization](#non-blocking-synchronization)
+- [Concurrent Collections](#concurrent-collections)
+  * [Best Practices and Patterns](#best-practices-and-patterns)
+- [Common Concurrency Issues and Solutions](#common-concurrency-issues-and-solutions)
+- [Java 9+ features](#java-9-features)
+
+<!-- TOC end -->
 
 
+
+<!-- TOC --><a name="introduction-to-concurrency"></a>
 # Introduction to Concurrency
 
+<!-- TOC --><a name="program-vs-process-vs-thread"></a>
 ## Program vs Process vs Thread
 
 - A program is a set of instructions and associated data that resides on the disk and is loaded by the operating system to perform some task. An executable file or a python script file are examples of programs. In order to run a program, the operating system's kernel is first asked to create a new process, which is an environment in which a program executes.
 - A process is a program in execution. A process is an execution environment that consists of instructions, user-data, and system-data segments, as well as lots of other resources such as CPU, memory, addressspace, disk and network I/O acquired at runtime. A program can have several copies of it running at the same time but a process necessarily belongs to only one program.
 - Thread is the smallest unit of execution in a process. A thread simply executes instructions serially. A process can have multiple threads running as part of it. Usually, there would be some state associated with the process that is shared among all the threads and in turn each thread would have some state private to itself. The globally shared state among the threads of a process is visible and accessible to all the threads, and special attention needs to be paid when any thread tries to read or write to this global shared state.
 
+<!-- TOC --><a name="concurrency-vs-parallelism"></a>
 ## Concurrency vs Parallelism
 
 - **Serial Execution:** When programs are serially executed, they are scheduled one at a time on the CPU. Once a task gets completed, the next one gets a chance to run. Each task is run from the beginning to the end without interruption.
-- **Concurrency:** 
+- **Concurrency:**
   - A concurrent program is one that can be decomposed into constituent parts and each part can be executed out of order or in partial order without affecting the final outcome.
   - A system capable of running several distinct programs or more than one independent unit of the same program in overlapping time intervals is called a concurrent system. The execution of two programs or units of the same program may not happen simultaneously.
   - A concurrent system can have two programs in progress at the same time where progress doesn't imply execution. One program can be suspended while the other executes. Both programs are able to make progress as their execution is interleaved.
@@ -23,13 +71,13 @@ https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
   - In concurrent systems, the goal is to maximize throughput and minimize latency. While the current thread or process is waiting for input-output operations, database transactions, or launching an external program, another process or thread receives the CPU allocation. On the kernel side, the OS sends an interrupt to the active task to stop it:
 
 
-  ![concurrency_-1024x593-1.png](../../diagrams/concurrency_-1024x593-1.png)
+![concurrency_-1024x593-1.png](../../diagrams/concurrency_-1024x593-1.png)
 
-  - Concurrent systems achieve lower latency and higher throughput when programs running on the system require frequent network or disk I/O.
-  - The classic example of a concurrent system is that of an operating system running on a single core machine. Such an operating system is concurrent but not parallel.
-  - It can only process one task at any given point in time but all the tasks being managed by the operating system appear to make progress because the operating system is designed for concurrency. Each task gets a slice of the CPU time to execute and move forward.
+- Concurrent systems achieve lower latency and higher throughput when programs running on the system require frequent network or disk I/O.
+- The classic example of a concurrent system is that of an operating system running on a single core machine. Such an operating system is concurrent but not parallel.
+- It can only process one task at any given point in time but all the tasks being managed by the operating system appear to make progress because the operating system is designed for concurrency. Each task gets a slice of the CPU time to execute and move forward.
 
-- **Parallelism:** 
+- **Parallelism:**
   - A parallel system is one which necessarily has the ability to execute multiple programs at the same time. Usually, this capability is aided by hardware in the form of multicore processors on individual machines or as computing clusters where several machines are hooked up to solve independent pieces of a problem simultaneously.
   - Note, an individual problem has to be concurrent in nature, that is portions of it can be worked on independently without affecting the final outcome before it can be executed in parallel.
   - In parallel systems the emphasis is on increasing throughput and optimizing usage of hardware resources. The goal is to extract out as much computation speedup as possible.
@@ -49,6 +97,7 @@ https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
 - Issues while designing concurrent systems : deadlocks, race conditions, or starvation.
 - Issues while designing parallel systems : memory corruption, leaks, or errors.
 
+<!-- TOC --><a name="preemptive-multitasking-vs-cooperative-multitasking"></a>
 ## Preemptive multitasking vs Cooperative multitasking
 
 - Computer multitasking means that a computer system enables multiple (and generally different) tasks to execute concurrently over a certain period. Processes and threads are execution instances of these tasks.
@@ -57,99 +106,104 @@ https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
 
 **Preemptive multitasking**
 
-- In preemptive multitasking, the operating system preempts a program to allow another waiting task to run on the CPU. 
-- Programs or threads can't decide how long for or when they can use the CPU. The operating system’s scheduler decides which thread or program gets to use the CPU next and for how much time. 
-- Furthermore, scheduling of programs or threads on the CPU isn’t predictable. A thread or program once taken off of the CPU by the scheduler can't determine when it will get on the CPU next. 
+- In preemptive multitasking, the operating system preempts a program to allow another waiting task to run on the CPU.
+- Programs or threads can't decide how long for or when they can use the CPU. The operating system’s scheduler decides which thread or program gets to use the CPU next and for how much time.
+- Furthermore, scheduling of programs or threads on the CPU isn’t predictable. A thread or program once taken off of the CPU by the scheduler can't determine when it will get on the CPU next.
 - As a consequence, if a malicious program initiates an infinite loop, it only hurts itself without affecting other programs or threads. Lastly, the programmer isn't burdened to decide when to give up control back to the CPU in code.
 - Preemptive multitasking has always been a core feature of Unix based systems.
 
 **Cooperative multitasking**
 
-- Cooperative Multitasking involves well-behaved programs to voluntarily give up control back to the scheduler so that another program can run. 
-- A program or thread may give up control after a period of time has expired or if it becomes idle or logically blocked. 
+- Cooperative Multitasking involves well-behaved programs to voluntarily give up control back to the scheduler so that another program can run.
+- A program or thread may give up control after a period of time has expired or if it becomes idle or logically blocked.
 - The operating system’s scheduler has no say in how long a program or thread runs for.
-- A malicious program can bring the entire system to a halt by busy waiting or running an infinite loop and not giving up control. 
+- A malicious program can bring the entire system to a halt by busy waiting or running an infinite loop and not giving up control.
 - The process scheduler for an operating system implementing cooperative multitasking is called a cooperative scheduler. As the name implies, the participating programs or threads are required to cooperate to make the scheduling scheme work.
 
 
+<!-- TOC --><a name="synchronous-vs-asynchronous-execution"></a>
 ## Synchronous vs Asynchronous execution
 
 **Synchronous Execution**
 
-- Synchronous execution refers to line-by-line execution of code. If a function is invoked, the program execution waits until the function call is completed. 
-- Synchronous execution blocks at each method call before proceeding to the next line of code. 
-- A program executes in the same sequence as the code in the source code file. 
+- Synchronous execution refers to line-by-line execution of code. If a function is invoked, the program execution waits until the function call is completed.
+- Synchronous execution blocks at each method call before proceeding to the next line of code.
+- A program executes in the same sequence as the code in the source code file.
 - Synchronous execution is synonymous to serial execution.
 
 **Asynchronous Execution**
 
-- Asynchronous programming is a means of parallel programming in which a unit of work runs separately from the main application thread and notifies the calling thread of its completion, failure or progress. 
+- Asynchronous programming is a means of parallel programming in which a unit of work runs separately from the main application thread and notifies the calling thread of its completion, failure or progress.
 - An asynchronous program doesn’t wait for a task to complete and can move on to the next task.
-- In contrast to synchronous execution, asynchronous execution doesn't necessarily execute code line by line, that is instructions may not run in the sequence they appear in the code. 
-- Async execution can invoke a method and move onto the next line of code without waiting for the invoked function to complete or receive its result. 
+- In contrast to synchronous execution, asynchronous execution doesn't necessarily execute code line by line, that is instructions may not run in the sequence they appear in the code.
+- Async execution can invoke a method and move onto the next line of code without waiting for the invoked function to complete or receive its result.
 - Usually, such methods return an entity sometimes called a future or promise that is a representation of an in-progress computation. The program can query for the status of the computation via the returned future or promise and retrieve the result once completed.
 - Another pattern is to pass a callback function to the asynchronous function call which is invoked with the results when the asynchronous function is done processing. Asynchronous programming is an excellent choice for applications that do extensive network or disk I/O and spend most of their time waiting.
 - In non-threaded environments, asynchronous programming provides an alternative to threads in order to achieve concurrency and fall under the cooperative multitasking model.
 
+<!-- TOC --><a name="cpu-bound-vs-io-bound-programs"></a>
 ## CPU Bound vs I/O Bound Programs
 
 - Programs utilize various resources of the computer systems on which they run. For instance a program running on your machine will broadly require:
   - CPU Time
   - Memory
   - Networking Resources, Disk Storage
-- Depending on what a program does, it can require heavier use of one or more resources. 
-- For instance, a program that loads gigabytes of data from storage into main memory would hog the main memory of the machine it runs on. 
+- Depending on what a program does, it can require heavier use of one or more resources.
+- For instance, a program that loads gigabytes of data from storage into main memory would hog the main memory of the machine it runs on.
 - Another can be writing several gigabytes to permanent storage, requiring abnormally high disk i/o.
 
 
 **CPU Bound**
 
-- Programs which are compute-intensive i.e. program execution requires very high utilization of the CPU (close to 100%) are called CPU bound programs. Such programs primarily depend on improving CPU speed to decrease program completion time. 
+- Programs which are compute-intensive i.e. program execution requires very high utilization of the CPU (close to 100%) are called CPU bound programs. Such programs primarily depend on improving CPU speed to decrease program completion time.
 - This could include programs such as data crunching, image processing, matrix multiplication etc.
-- If a CPU bound program is provided a more powerful CPU it can potentially complete faster. Eventually, there is a limit on how powerful a single CPU can be. 
+- If a CPU bound program is provided a more powerful CPU it can potentially complete faster. Eventually, there is a limit on how powerful a single CPU can be.
 - At this point, the recourse is to harness the computing power of multiple CPUs and structure your program code in a way that can take advantage of the multiple CPU units available.
 - Example : Sum of natural numbers from 1 to 1000000.
 - A single-threaded program would sum in a single loop from 1 to 1000000. To cut down on execution time, we can create two threads and divide the range into two halves. The first thread sums the numbers from 1 to 500000 and the second sums the numbers from 500001 to 1000000.
-- If there are two processors available on the machine, then each thread can independently run on a single CPU in parallel. In the end, we sum the results from the two threads to get the final result. 
+- If there are two processors available on the machine, then each thread can independently run on a single CPU in parallel. In the end, we sum the results from the two threads to get the final result.
 - Theoretically, the multithreaded program should finish in half the time that it takes for the single-threaded program. However, there will be a slight overhead of creating the two threads and merging the results from the two threads.
 
 
 **I/O Bound**
 
-- I/O bound programs are the opposite of CPU bound programs. Such programs spend most of their time waiting for input or output operations to complete while the CPU sits idle. 
-- I/O operations can consist of operations that write or read from main memory or network interfaces. Because the CPU and main memory are physically separate a data bus exists between the two to transfer bits to and fro. Similarly, data needs to be moved between network interfaces and CPU/memory. 
+- I/O bound programs are the opposite of CPU bound programs. Such programs spend most of their time waiting for input or output operations to complete while the CPU sits idle.
+- I/O operations can consist of operations that write or read from main memory or network interfaces. Because the CPU and main memory are physically separate a data bus exists between the two to transfer bits to and fro. Similarly, data needs to be moved between network interfaces and CPU/memory.
 - Even though the physical distances are tiny, the time taken to move the data across is big enough for several thousand CPU cycles to go waste. This is why I/O bound programs would show relatively lower CPU utilization than CPU bound programs.
 
 **Some key points**
 
-- Both types of programs can benefit from concurrent architectures. 
-- If a program is CPU bound we can increase the number of processors and structure our program to spawn multiple threads that individually run on a dedicated or shared CPU. 
-- For I/O bound programs, it makes sense to have a thread give up CPU control if it is waiting for an I/O operation to complete so that another thread can get scheduled on the CPU and utilize CPU cycles. 
-- Different programming languages come with varying support for multithreading. For instance, Javascript is single-threaded, Java provides full-blown multithreading and Python is sort of multithreaded as it can only have a single thread in running state because of its global interpreter lock (GIL) limitation. 
-- However, all three languages support asynchronous programming models which is another way for programs to be concurrent (but not parallel). 
+- Both types of programs can benefit from concurrent architectures.
+- If a program is CPU bound we can increase the number of processors and structure our program to spawn multiple threads that individually run on a dedicated or shared CPU.
+- For I/O bound programs, it makes sense to have a thread give up CPU control if it is waiting for an I/O operation to complete so that another thread can get scheduled on the CPU and utilize CPU cycles.
+- Different programming languages come with varying support for multithreading. For instance, Javascript is single-threaded, Java provides full-blown multithreading and Python is sort of multithreaded as it can only have a single thread in running state because of its global interpreter lock (GIL) limitation.
+- However, all three languages support asynchronous programming models which is another way for programs to be concurrent (but not parallel).
 - There are also memory-bound programs that depend on the amount of memory available to speed up execution.
 
 
+<!-- TOC --><a name="throughput-and-latency"></a>
 ## Throughput and Latency
 
 - Throughput is defined as the rate of doing work or how much work gets done per unit of time.
 - Latency is defined as the time required to complete a task or produce a result. Latency is also referred to as response time.
-- In the context of concurrency, throughput can be thought of as time taken to execute a program or computation. 
-- For example, imagine a program that is given hundreds of files containing integers and asked to sum up all the numbers. Since addition is commutative each file can be worked on in parallel. 
-- In a single-threaded environment, each file will be sequentially processed but in a concurrent system, several threads can work in parallel on distinct files. Of course, there will be some overhead to manage the state including already processed files. However, such a program will complete the task much faster than a single thread. 
-- The performance difference will become more and more apparent as the number of input files increases. 
+- In the context of concurrency, throughput can be thought of as time taken to execute a program or computation.
+- For example, imagine a program that is given hundreds of files containing integers and asked to sum up all the numbers. Since addition is commutative each file can be worked on in parallel.
+- In a single-threaded environment, each file will be sequentially processed but in a concurrent system, several threads can work in parallel on distinct files. Of course, there will be some overhead to manage the state including already processed files. However, such a program will complete the task much faster than a single thread.
+- The performance difference will become more and more apparent as the number of input files increases.
 - The throughput in this example can be defined as the number of files processed by the program in a minute.
-- And latency can be defined as the total time taken to completely process all the files. 
+- And latency can be defined as the total time taken to completely process all the files.
 - As one can observe in a multithreaded implementation throughput will go up and latency will go down. More work gets done in less amount of time. In general, the two have an inverse relationship.
 
 
+<!-- TOC --><a name="context-switching"></a>
 ## Context Switching
 
-- Context switch is a system event in which the operating system or the OS removes the executing job (thread) from the CPU and allocates it to another task. It involves saving the context (local data, program pointers, etc. of the thread) of the switched-out process (or thread) and loading the context of the one taking over. 
+- Context switch is a system event in which the operating system or the OS removes the executing job (thread) from the CPU and allocates it to another task. It involves saving the context (local data, program pointers, etc. of the thread) of the switched-out process (or thread) and loading the context of the one taking over.
 - The OS ensures a switch is seamless, fast, and free from conflicts or dependency. Thus, context switching is vital for multitasking and user responsiveness.
 - Context switching is always an overhead, and it is not cheap. It is a resource and CPU intensive process, as the OS has to allocate memory for the thread stack and CPU time for context switches.
 
 
+<!-- TOC --><a name="multithreading-definition-benefits-and-cost"></a>
 ## Multithreading : Definition, Benefits and Cost
 
 - Multithreading is a CPU (central processing unit) feature that allows two or more instruction threads to execute independently while sharing the same process resources. A thread is a self-contained sequence of instructions that can execute in parallel with other threads that are part of the same root process.
@@ -164,6 +218,7 @@ https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
   - **Concurrency Issues:** Multithreading can lead to concurrency issues like deadlocks, race conditions, and thread interference if threads aren't properly synchronized. These issues can cause system failure.
 
 
+<!-- TOC --><a name="concurrency-models"></a>
 ## Concurrency Models
 
 - A concurrency model specifies how threads in the system collaborate to complete the tasks they are given along with proper synchronization to prevent partial reading or writing of the final value in the program which is running in the system. Different concurrency models split the tasks in different ways, and the threads may communicate and collaborate in different ways.
@@ -174,7 +229,7 @@ https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
   - **Parallel workers model** (also called shared memory model, as concurrent modules interact by reading and writing shared objects in memory.)
   - **Assembly Line model** (also called message passing model, or reactive model or event driven model, as concurrent modules interact by sending messages to each other through a communication channel. Modules send off messages, and incoming messages to each module are queued up for handling. No shared states in this type of model)
 - In the parallel workers concurrency model a delegator distributes the incoming jobs to different workers. Each worker completes the full job. The workers work in parallel, running in different threads, and possibly on different CPUs. The parallel workers concurrency model can be designed to use both shared state or separate state, meaning the workers either has access to some shared state (shared objects or data), or they have no shared state.
-- Advantages Of Parallel Workers Model: 
+- Advantages Of Parallel Workers Model:
   - It is easy to implement and easy to understand.
   - If the amount of work is high or more then to decrease the time complexity or to decrease the execution time more workers can be added to increase the work parallelly.
 - Disadvantages Of Parallel Workers Model:
@@ -187,6 +242,7 @@ https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
 - Reactive , Event driven systems use assembly line model. Actors vs channels are another sub-types in it.
 
 
+<!-- TOC --><a name="same-threading-single-threaded-concurrency"></a>
 ## Same-Threading, Single-Threaded Concurrency
 
 - Single-threaded systems do not share any state (objects / data) with other threads. This enables the single thread to use non-concurrent data structures, and utilize the CPU and CPU caches better. Unfortunately, single-threaded systems do not fully utilize modern CPUs (all the cores).
@@ -197,6 +253,7 @@ https://www.youtube.com/watch?v=WldMTtUWqTg&t=5563s
 
 More about Single thread concurrency design - https://jenkov.com/tutorials/java-concurrency/single-threaded-concurrency.html
 
+<!-- TOC --><a name="mutex-vs-semaphore-vs-monitor"></a>
 ## Mutex vs Semaphore vs Monitor
 
 **Mutex**
@@ -219,8 +276,8 @@ More about Single thread concurrency design - https://jenkov.com/tutorials/java-
 **Monitor**
 
 - Monitors are generally language level constructs whereas mutex and semaphore are lower-level or OS provided constructs.
-- A monitor is made up of a mutex and one or more condition variables. 
-- A single monitor can have multiple condition variables but not vice versa. 
+- A monitor is made up of a mutex and one or more condition variables.
+- A single monitor can have multiple condition variables but not vice versa.
 - Theoretically, another way to think about a monitor is to consider it as an entity having two queues or sets where threads can be placed. One is the entry set and the other is the wait set.
 - When a thread A enters a monitor it is placed into the entry set. If no other thread owns the monitor, which is equivalent of saying no thread is actively executing within the monitor section, then thread A will acquire the monitor and is said to own it too. Thread A will continue to execute within the monitor section till it exits the monitor or calls wait() on an associated condition variable and be placed into the wait set.
 - Another thread B comes along and gets placed in the entry set, while thread A sits in the wait set. Since no other thread owns the monitor, thread B successfully acquires the monitor and continues execution. If thread B exits the monitor section without calling notify() on the condition variable, then thread A will remain waiting in the wait set. Thread B can also invoke wait() and be placed in the wait set along with thread A. This then would require a third thread to come along and call notify() on the condition variable on which both threads A and B are waiting.
@@ -236,8 +293,9 @@ More about Single thread concurrency design - https://jenkov.com/tutorials/java-
   - the method the thread is executing has synchronized in its signature
   - the thread is executing a block that is synchronized on the object on which wait or notify will be called
   - in case of a class, the thread is executing a static method which is synchronized.
-- 
+-
 
+<!-- TOC --><a name="amdahls-law-and-moores-law"></a>
 ## Amdahls law and Moores Law
 
 **Amdahl's Law**
@@ -247,7 +305,7 @@ More about Single thread concurrency design - https://jenkov.com/tutorials/java-
 
       S(n) = 1 / ((1-P) + P/n)
 
-where 
+where
 - S(n) is the speed-up achieved by using n cores or threads.
 - P is the fraction of the program that is parallelizable
 - (1 - P) is the fraction of the program that must be executed serially.
@@ -271,6 +329,7 @@ Example - program has a parallelizable portion of P = 90% = 0.9.
 - To exploit this processing power, programs must be written as multi- threaded applications. A single-threaded application running on an octa- core processor will only use 1/8th of the total throughput of that machine, which is unacceptable in most scenarios.
 
 
+<!-- TOC --><a name="java-memory-model-for-threads"></a>
 # Java Memory Model for Threads
 - Kernel is central component of an operating system that manages operations of computer and hardware. Kernel loads first into memory when an operating system is loaded and remains into memory until operating system is shut down again. It is responsible for various tasks such as disk management, task management, and memory management. Kernel acts as a bridge between applications and data processing performed at hardware level using inter-process communication and system calls.
 
@@ -295,11 +354,12 @@ Example - program has a parallelizable portion of P = 90% = 0.9.
 - As soon as the code is compiled, process is created and JIT compiler starts interpreting the code. While doing so, it will understand that, 3 threads are required in this process and stored the machine code in code segment. Counters of each thread in process points to the respective start line in code segment.
 - OS scheduler schedules the main thread and process starts executing. As it encounters the start of T1 thread, Main thread may get paused or T1 may get scheduled on other CPU core. During scheduling, information on thread register and PC is loaded into CPU core register.
 - If CPU core is not available, the intermediate results of the execution of Main thread, along with counter will be shifted from CPU register to thread register, thus saving the state of Main thread, and then T1 may get scheduled on that CPU core.
-- Similarly, T2 will also get scheduled. After execution of T1 and T2 , the Main thread will get again rescheduled on CPU core, and start from right it was stopped. The Main thread register will load the saved intermediate results back to CPU register. Thus register help in context switching. 
-- Note the order of Main, T1 and T2 execution depends on OS scheduler. It is possible that, if any core is available while T1 is running , Main thread may get scheduled and complete its execution before T2 and even T1. This is parallelism. 
+- Similarly, T2 will also get scheduled. After execution of T1 and T2 , the Main thread will get again rescheduled on CPU core, and start from right it was stopped. The Main thread register will load the saved intermediate results back to CPU register. Thus register help in context switching.
+- Note the order of Main, T1 and T2 execution depends on OS scheduler. It is possible that, if any core is available while T1 is running , Main thread may get scheduled and complete its execution before T2 and even T1. This is parallelism.
 - If there is just one core, then it will be concurrency.
 
 
+<!-- TOC --><a name="user-thread-vs-kernel-thread"></a>
 ## User Thread vs Kernel Thread
 
 - User-level threads are managed entirely by the application, without any involvement from the operating system kernel and stored in its process's address space. The application manages the creation, scheduling, and synchronization of threads.
@@ -307,7 +367,7 @@ Example - program has a parallelizable portion of P = 90% = 0.9.
   - **Benefits:**
     - User-level threads are generally faster to create and switch between than kernel-level threads, as there is no need to switch to kernel mode or perform costly context switches.
     - User-level threads are generic and can run on any Operating System.
-    - 
+    -
   - **Disadvantages:**
     - OS is unaware of user-level threads, so the scheduler cannot schedule them properly.
     - The entire process will get blocked if one user-level thread performs a blocking operation (eg: I/O operation).
@@ -337,6 +397,7 @@ Example - program has a parallelizable portion of P = 90% = 0.9.
   - **One-to-one** creating a user thread requires the corresponding kernel thread. multiple thread can run on multiple processor. if any user thread makes a blocking system call, the other user threads won’t be blocked.
 
 
+<!-- TOC --><a name="the-happens-before-relationship-model"></a>
 ## The "happens before relationship" model
 
 - The (JIT) compiler in the spirit of optimization is free to reorder statements however it must make sure that the outcome of the program is the same as without reordering.
@@ -421,8 +482,10 @@ public class ReorderingExample {
 
 
 
+<!-- TOC --><a name="basics-of-java-multithreading"></a>
 # Basics of Java Multithreading
 
+<!-- TOC --><a name="thread-creation"></a>
 ## Thread Creation
 
 - To execute a thread , start() method of Thread class is called, which in turn invokes run() method in Thread class.
@@ -430,7 +493,7 @@ public class ReorderingExample {
 - Notice, run() method has a return value of void, so thread doesnt return anything. `Callable` interface is used to get the result of thread execution, which is known as `Future`.
 - Threads can be created by using two mechanisms :
   1. Extending the Thread class:
-    - The first way to specify what code a thread is to run, is to create a subclass of Thread and override the run() method.
+  - The first way to specify what code a thread is to run, is to create a subclass of Thread and override the run() method.
 ```java
   // Java code for thread creation by extending
   // the Thread class
@@ -464,9 +527,9 @@ public class ReorderingExample {
 
 ```
 
-  2. Implementing the Runnable Interface and create a Thread class object:
-     - The second way to specify what code a thread should run is by creating a class that implements the java.lang.Runnable interface (a functional interface). A Java object that implements the Runnable interface can be executed by a Java Thread.
-  
+2. Implementing the Runnable Interface and create a Thread class object:
+  - The second way to specify what code a thread should run is by creating a class that implements the java.lang.Runnable interface (a functional interface). A Java object that implements the Runnable interface can be executed by a Java Thread.
+
   ```
 public class MyRunnable implements Runnable {
 
@@ -504,22 +567,23 @@ thread.start();
 - To have the run() method of the MyRunnable instance called by the new created thread, newThread, newThread.start() method must be called.
 
 
+<!-- TOC --><a name="thread-lifecycle-and-states"></a>
 ## Thread Lifecycle and States
 
 ![thread-states-lifecycle.png](../../diagrams/thread-states-lifecycle.png)
 
-- **New Thread:** 
+- **New Thread:**
   - When a new thread is created, it is in the new state. The thread has not yet started to run when the thread is in this state. When a thread lies in the new state, its code is yet to be run and hasn’t started to execute.
-- **Runnable State:** 
+- **Runnable State:**
   - A thread that is ready to run is moved to a runnable state. In this state, a thread might actually be running or it might be ready to run at any instant of time. It is the responsibility of the thread scheduler(part of JVM) to give the thread, time to run. A multi-threaded program allocates a fixed amount of time to each individual thread. Each and every thread runs for a short while and then pauses and relinquishes the CPU to another thread so that other threads can get a chance to run. When this happens, all such threads that are ready to run, waiting for the CPU and the currently running thread lie in a runnable state.
-- **Blocked:** 
+- **Blocked:**
   - The thread will be in blocked state when it is trying to acquire a monitor lock to enter or re-enter a synchronized block/method but currently the lock is acquired by the other thread. The thread will move from the blocked state to runnable state when it acquires the lock.
-- **Waiting state:** 
+- **Waiting state:**
   - The thread will be in waiting state when it calls wait() method or join() method. It will move to the runnable state when other thread will notify or that thread will be terminated. waiting for some other thread to perform a particular action without any time limit.
   -  According to JavaDocs, any thread can enter this state by calling any one of the following three methods:
-      - object.wait()
-      - thread.join()
-      - LockSupport.park()
+    - object.wait()
+    - thread.join()
+    - LockSupport.park()
 
 ```java
   public class WaitingState implements Runnable {
@@ -567,7 +631,7 @@ thread.start();
    */
 ```
 
-- **Timed Waiting:** 
+- **Timed Waiting:**
   - A thread lies in a timed waiting state when it calls a method with a time-out parameter. A thread lies in this state until the timeout is completed or until a notification is received. For example, when a thread calls sleep or a conditional wait, it is moved to a timed waiting state. waiting for some other thread to perform a specific action for a specified period.
   - According to JavaDocs, there are five ways to put a thread on TIMED_WAITING state:
     - thread.sleep(long millis)
@@ -613,6 +677,7 @@ thread.start();
   - Because there occurred some unusual erroneous event, like a segmentation fault or an unhandled exception.
 
 
+<!-- TOC --><a name="interthread-communication"></a>
 ## InterThread Communication
 
 - Inter-Thread Communication (Cooperation) is a mechanism that enables threads of a process to exchange information or coordinate their execution, thus work together to solve a common problem or to share resources.
@@ -620,7 +685,7 @@ thread.start();
 - To avoid polling, Java provides three methods. These are the wait(), notify(), and notifyAll methods(). Because these methods are in the object class and are marked as final, they can be used in any class. They can only be utilized inside a synchronized block.
 - The `java.util.concurrent` package provides higher-level constructs such as locks, semaphores, and condition variables to facilitate inter-thread communication and synchronization.
 
-**1. wait()** 
+**1. wait()**
 
 - The `wait()` method causes the current thread to wait indefinitely until another thread either invokes notify() for the same object or notifyAll().
 - For this, the current thread must own the object’s monitor. According to Javadocs, this can happen in the following ways:
@@ -636,7 +701,7 @@ thread.start();
 - For all threads waiting on this object’s monitor (by using any one of the wait() methods), the method `notify()` notifies any one of them to wake up arbitrarily.
 - The choice of exactly which thread to wake is nondeterministic and depends upon the implementation.
 - Since notify() wakes up a single random thread, we can use it to implement mutually exclusive locking where threads are doing similar tasks. But in most cases, it would be more viable to implement notifyAll().
-- `notifyAll()` method simply wakes all threads that are waiting on this object’s monitor. 
+- `notifyAll()` method simply wakes all threads that are waiting on this object’s monitor.
 
 **Difference between sleep() and wait()**
 
@@ -668,6 +733,7 @@ thread.start();
 - Thread interrupt - https://www.geeksforgeeks.org/interrupting-a-thread-in-java/
 
 
+<!-- TOC --><a name="thread-joining"></a>
 ## Thread Joining
 
 - The join() method is defined in Thread class throws Interrupted exception.
@@ -702,6 +768,7 @@ thread.start();
   - “All actions in a thread happen-before any other thread successfully returns from a join() on that thread.”
   - This means that when a thread t1 calls t2.join(), all changes done by t2 are visible in t1 on return. However, if we do not invoke join() or use other synchronization mechanisms, we do not have any guarantee that changes in the other thread will be visible to the current thread even if the other thread has been completed.
 
+<!-- TOC --><a name="thread-safety-and-shared-resources-synchronization-in-java"></a>
 ## Thread Safety and shared resources, Synchronization in Java
 
 - A class and its public APIs are labelled as thread safe if multiple threads can consume the exposed APIs without causing race conditions or state corruption (shared resource) or unpredictable results for the class.
@@ -800,7 +867,7 @@ public class MessageService {
 **Using Atomic Objects :**
 
 - It’s also possible to achieve thread-safety using the set of atomic classes that Java provides, including AtomicInteger, AtomicLong, AtomicBoolean and AtomicReference.
-- Atomic classes allow us to perform atomic operations, which are thread-safe, without using synchronization. 
+- Atomic classes allow us to perform atomic operations, which are thread-safe, without using synchronization.
 - An atomic operation is executed in one single machine-level operation.
 
 **Volatile Fields :**
@@ -875,11 +942,12 @@ public class ObjectLockCounter {
 
 **Other methods for thread safety include using Reentrant Locks, Read/Write Locks**
 
+<!-- TOC --><a name="race-conditions-and-critical-sections"></a>
 ## Race Conditions and Critical Sections
 
 - Critical section is any piece of code that has the possibility of being executed concurrently by more than one thread of the application and exposes any shared data or resources used by the application for access.
 - Here the sequence of execution for the threads makes a difference in the result of the concurrent execution of the critical section.
-- When the result of multiple threads executing a critical section may differ depending on the sequence in which the threads execute, the critical section is said to contain a race condition. 
+- When the result of multiple threads executing a critical section may differ depending on the sequence in which the threads execute, the critical section is said to contain a race condition.
 - The threads "race" through the critical section to write or read shared resources and depending on the order in which threads finish the "race", the program result changes.
 - There are two common patterns of Race conditions:
   - Check-then-act
@@ -927,7 +995,7 @@ public class ObjectLockCounter {
   }
 ```
 
-- Imagine if two threads, A and B, are executing the add method on the same instance of the Counter class. There is no way to know when the operating system switches between the two threads. 
+- Imagine if two threads, A and B, are executing the add method on the same instance of the Counter class. There is no way to know when the operating system switches between the two threads.
 - The code in the add() method is not executed as a single atomic instruction by the Java virtual machine.
 - Rather it is a set of smaller executions for each thread, with thread interleaving happening in between:
   - Read this.count from main memory into CPU core register.
@@ -956,6 +1024,7 @@ public class ObjectLockCounter {
 - Using synchronizations and atomic operations
 
 
+<!-- TOC --><a name="producer-consumer-problem"></a>
 ## Producer-Consumer Problem
 
 (using blockingQueue)
@@ -963,12 +1032,14 @@ https://www.baeldung.com/java-producer-consumer-problem
 
 
 
+<!-- TOC --><a name="cpu-cache-coherence"></a>
 ## CPU Cache coherence
 
 https://jenkov.com/tutorials/java-concurrency/cache-coherence-in-java-concurrency.html
 https://www.geeksforgeeks.org/cache-coherence/
 
 
+<!-- TOC --><a name="java-virtual-threads"></a>
 ## Java Virtual Threads
 
 
@@ -1072,17 +1143,19 @@ https://www.geeksforgeeks.org/cache-coherence/
 
 ```
 
-- The Executors.newVirtualThreadPerTaskExecutor() function is used in the example above to build the ExecutorService. To complete the work, a new virtual thread is generated and launched when one uses ExecutorService.submit(Runnable). 
+- The Executors.newVirtualThreadPerTaskExecutor() function is used in the example above to build the ExecutorService. To complete the work, a new virtual thread is generated and launched when one uses ExecutorService.submit(Runnable).
 - A Future instance is returned by this method. It’s important to note that the Future.get() function waits for the thread to complete its task.
 - The code submits a basic task that prints a message and then uses future to wait for the task to finish using an ExecutorService with a virtual thread per task.fetch(). It prints “GeeksForGeeks” to signify that the task has been finished after it is finished.
 
 
+<!-- TOC --><a name="atomic-operations"></a>
 #  Atomic Operations
 
 - Using locks solves the problem of accessing shared mutable objects in a concurrent environment, but the performance of the system takes a hit.
 - When multiple threads attempt to acquire a lock, one of them wins, while the rest of the threads are either blocked or suspended. The process of suspending and then resuming a thread is very expensive and affects the overall efficiency of the system.
 - Atomic operations(non-dividable) are an alternative. Atomic operations are those operations that ALWAYS execute together. If an operation is atomic, then it cannot be partially complete, either it will be complete, or not start at all, but will not be incomplete.
 
+<!-- TOC --><a name="compare-and-swap-operations"></a>
 ## Compare-and-Swap Operations
 
 - Non-blocking algorithms for concurrent environments exploit low-level atomic machine instructions such as compare-and-swap (CAS), to ensure data integrity.
@@ -1097,6 +1170,7 @@ https://www.geeksforgeeks.org/cache-coherence/
 
 
 
+<!-- TOC --><a name="atomicinteger-atomiclong-atomicboolean-atomicreference"></a>
 ## AtomicInteger, AtomicLong, AtomicBoolean, AtomicReference
 
 - Objects of these classes represent the atomic variable of int, long, boolean, and object reference respectively. These classes contain the following methods:
@@ -1111,6 +1185,7 @@ https://www.geeksforgeeks.org/cache-coherence/
 * Volatile vs Atomic variables
   https://www.baeldung.com/java-volatile-vs-atomic
 
+<!-- TOC --><a name="locks-and-semaphores"></a>
 # Locks and Semaphores
 
 https://www.baeldung.com/java-concurrent-locks
@@ -1132,6 +1207,7 @@ https://www.baeldung.com/java-concurrent-locks
 
 
 
+<!-- TOC --><a name="difference-between-locks-and-synchronized-blocksmethods"></a>
 ## Difference between Locks and Synchronized blocks/methods
 
 - A synchronized block is fully contained within a method. We can have Lock APIs lock() and unlock() operation in separate methods.
@@ -1140,6 +1216,7 @@ https://www.baeldung.com/java-concurrent-locks
 - A thread that is in “waiting” state to acquire the access to synchronized block can’t be interrupted. The Lock API provides a method lockInterruptibly() that can be used to interrupt the thread when it’s waiting for the lock.
 
 
+<!-- TOC --><a name="lock-interface"></a>
 ## Lock Interface
 
 - The Lock interface provides a tool for implementing mutual exclusion that is more flexible and capable than synchronized methods and statements. A single thread is allowed to acquire the lock and gain access to a shared resource, however, some implementing classes such as the ReentrantReadWriteLock allow multiple threads concurrent access to shared resource.
@@ -1605,8 +1682,10 @@ https://www.baeldung.com/java-concurrent-locks
 ```
 
 
+<!-- TOC --><a name="advanced-multithreading-and-java-concurrency-utilities"></a>
 # Advanced Multithreading and Java Concurrency Utilities
 
+<!-- TOC --><a name="threadpools-executors-and-executorservice-threadpoolexecutor-scheduledexecutorservice"></a>
 ## ThreadPools, Executors and ExecutorService, ThreadPoolExecutor, ScheduledExecutorService
 
 - A task is a logical unit of work (A database server handling client queries, server handling HTTP requests ) and can be represented by an object of a class implementing the Runnable interface.
@@ -1653,9 +1732,10 @@ https://www.baeldung.com/java-concurrent-locks
 ```
 
 Further readings - https://www.baeldung.com/java-executor-service-tutorial
-                - https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/threadpoolexecutor
+- https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/threadpoolexecutor
 
 
+<!-- TOC --><a name="forkjoin-framework"></a>
 ## Fork/Join Framework
 
 - Similar to ExecutorService, it provides tools to help speed up parallel processing by attempting to use all available processor cores. It accomplishes this through a divide and conquer approach.
@@ -1667,9 +1747,10 @@ Further readings - https://www.baeldung.com/java-executor-service-tutorial
 Reading- https://www.baeldung.com/java-fork-join
 
 
+<!-- TOC --><a name="callable-and-future-interface"></a>
 ## Callable and Future Interface
 
-  **Limitations of Runnable:**
+**Limitations of Runnable:**
 - The run() method of the Runnable interface is of type void and cannot return any values.
 - The Runnable interface doesn't allow to throw any checked exceptions (exceptions caught at compile time. Eg: Exception).
 - Callable interface overcomes these limitations. call() methods contains 'throws Exception' clause.
@@ -1748,10 +1829,12 @@ public static void main(String[] args) throws Exception
 
 
 
+<!-- TOC --><a name="completablefuture"></a>
 ## CompletableFuture
 - https://www.baeldung.com/java-completablefuture
-- 
+-
 
+<!-- TOC --><a name="threadlocal"></a>
 ## ThreadLocal
 - The TheadLocal construct allows us to store data that will be accessible only by a specific thread.
 - get(), set(), remove() methods and withInitial() , a static method is exposed.
@@ -1788,6 +1871,7 @@ class UnsafeCounter {
 } }
 ```
 
+<!-- TOC --><a name="countdownlatch-cyclicbarrier-phaser-and-exchanger"></a>
 ## CountDownLatch, CyclicBarrier, Phaser, and Exchanger
 
 - The java.util.concurrent package contains several classes that help manage a set of threads that collaborate with each other. Some of these include:
@@ -1890,14 +1974,16 @@ public class Main {
 - https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/exchanger
 
 
+<!-- TOC --><a name="non-blocking-synchronization"></a>
 ## Non-Blocking synchronization
 
 - Non-blocking algorithms use machine-level atomic instructions such as compare-and-swap instead of locks to provide data integrity when multiple threads access shared resources.
 - Non-blocking algorithms dont block when multiple threads contend for the same data and thus greatly reduce scheduling overhead.
 - https://www.baeldung.com/java-asynchronous-programming
-- Future and CompletableFuture, JavaNIO library, Reactive Programing using FLow API, and Spring WebFlux are some example which provide asynchronous operation in Java. 
+- Future and CompletableFuture, JavaNIO library, Reactive Programing using FLow API, and Spring WebFlux are some example which provide asynchronous operation in Java.
 
 
+<!-- TOC --><a name="concurrent-collections"></a>
 # Concurrent Collections
 
 - Concurrent Collections provide better performance than synchronized (wrapper) collections. Synchronized collections use intrinsic locking and the entire collections are locked. Concurrent collections achieve thread-safety by dividing their data into segments and different threads acquire locks on different segments, thus increasing throughput.
@@ -1905,8 +1991,8 @@ public class Main {
   - **Copy on Write:**
     - Concurrent collections utilizing this scheme are suitable for read-heavy use cases. An immutable copy is created of the backing collection and whenever a write operation is attempted, the copy is discarded and a new copy with the change is created. Reads of the collection don’t require any synchronization, though synchronization is needed briefly when the new array is being created. Examples include CopyOnWriteArrayList and CopyOnWriteArraySet
   - **Compare and Swap:**
-    - Consider a computation in which the value of a single variable is used as input to a long-running calculation whose eventual result is used to update the variable. Traditional synchronization makes the whole computation atomic, excluding any other thread from concurrently accessing the variable. This reduces opportunities for parallel execution and hurts throughput. An algorithm based on CAS behaves differently: it makes a local copy of the variable and performs the calculation without getting exclusive access. 
-    - Only when it is ready to update the variable does it call CAS, which in one atomic operation compares the variable’s value with its value at the start and, if they are the same, updates it with the new value. 
+    - Consider a computation in which the value of a single variable is used as input to a long-running calculation whose eventual result is used to update the variable. Traditional synchronization makes the whole computation atomic, excluding any other thread from concurrently accessing the variable. This reduces opportunities for parallel execution and hurts throughput. An algorithm based on CAS behaves differently: it makes a local copy of the variable and performs the calculation without getting exclusive access.
+    - Only when it is ready to update the variable does it call CAS, which in one atomic operation compares the variable’s value with its value at the start and, if they are the same, updates it with the new value.
     - If they are not the same, the variable must have been modified by another thread; in this situation, the CAS thread can try the whole computation again using the new value, or give up, or— in some algorithms — continue, because the interference will have actually done its work for it! Collections using CAS include ConcurrentLinkedQueue and ConcurrentSkipListMap .
   - **Lock:**
     - Some collection classes use Lock to divide up the collection into multiple parts that can be locked separately resulting in improved concurrency. For example, LinkedBlockingQueue has separate locks for the head and tail ends of the queue, so that elements can be added and removed in parallel. Other collections using these locks include ConcurrentHashMap and most of the implementations of BlockingQueue .
@@ -1924,6 +2010,7 @@ public class Main {
 * Concurrent Modification Exception
 
 
+<!-- TOC --><a name="best-practices-and-patterns"></a>
 ## Best Practices and Patterns
 * Thread Safety Best Practices
 * Immutable Objects
@@ -1932,7 +2019,8 @@ public class Main {
 * Concurrency Design Patterns
 * Parallel Streams
 
-## Common Concurrency Issues and Solutions
+<!-- TOC --><a name="common-concurrency-issues-and-solutions"></a>
+# Common Concurrency Issues and Solutions
 * Deadlocks
 * Starvation
 * Livelocks
@@ -1942,14 +2030,15 @@ public class Main {
 * Spurious Wakeups
 * Strategies for Avoiding Concurrency Issues
 
-## Java 9+ features
+<!-- TOC --><a name="java-9-features"></a>
+# Java 9+ features
 
 * Reactive Programming with Flow API
 * CompletableFuture Enhancements
 * Process API Updates
 * Local-Variable Type Inference (var keyword)
-    * Enhancements in Optional class
-    * New Methods in the String class relevant to concurrency
+  * Enhancements in Optional class
+  * New Methods in the String class relevant to concurrency
 
 
 
