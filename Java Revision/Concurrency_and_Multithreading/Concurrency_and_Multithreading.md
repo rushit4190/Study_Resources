@@ -1790,20 +1790,138 @@ class UnsafeCounter {
 
 ## CountDownLatch, CyclicBarrier, Phaser, and Exchanger
 
-- 
+- The java.util.concurrent package contains several classes that help manage a set of threads that collaborate with each other. Some of these include:
+
+  * CyclicBarrier
+  * Phaser
+  * CountDownLatch
+  * Exchanger
+  * Semaphore
+  * SynchronousQueue
+
+- If we have a set of threads that communicate with each other and resemble one of the common patterns, we can simply reuse the appropriate library classes (also called Synchronizers) instead of trying to come up with a custom scheme using a set of locks and condition objects and the synchronized keyword.
+
+
+**CountDownLatch**
+
+- CountDownLatch is a synchronization primitive that comes with the java.util.concurrent package. It can be used to block a single or multiple threads while other threads complete their operations.
+- A CountDownLatch object is initialized with the number of tasks/threads it is required to wait for. Multiple threads can block and wait for the CountDownLatch object to reach zero by invoking await() . Every time a thread finishes its work, the thread invokes countDown() which decrements the counter by 1. Once the count reaches zero, threads waiting on the await() method are notified and resume execution.
+- https://www.geeksforgeeks.org/countdownlatch-in-java/
+- https://www.baeldung.com/java-countdown-latch
+
+**CyclicBarrier**
+
+- A CyclicBarrier is a synchronizer that allows a set of threads to wait for each other to reach a common execution point, also called a barrier.
+- The threads wait for each other by calling the await() method on the CyclicBarrier . All threads that wait for each other to reach barrier are called parties. This situation where the required number of threads have called await(), is called tripping the barrier.
+- CyclicBarrier is initialized with an integer that denotes the number of threads that need to call the await() method on the barrier. Second argument in CyclicBarrier’s constructor is a Runnable instance that includes the action to be executed once the last thread arrives.
+```
+  public CyclicBarrier(int parties, Runnable barrierAction)
+```
+- The most useful property of CyclicBarrier is that it can be reset to its initial state by calling the reset() method. It can be reused after all the threads have been released.
+- Lets take an example where CyclicBarrier is initialized with 3 worker threads that will have to cross the barrier. All the threads need to call the await() method. Once all the threads have reached the barrier, it gets broken and each thread starts its execution from that point onwards.
+
+```java
+/**
+ * Runnable task for each thread.
+ */
+class Task implements Runnable {
+    private CyclicBarrier barrier;
+    public Task(CyclicBarrier barrier) {
+        this.barrier = barrier;
+    }
+
+  //Await is invoked to wait for other threads
+  @Override
+  public void run() {
+    try {
+      System.out.println(Thread.currentThread().getName() + " is waiting on barrier");
+              barrier.await();
+      //printing after crossing the barrier
+      System.out.println(Thread.currentThread().getName() + " has crossed the barrier");
+    } catch (InterruptedException ex) {
+      Logger.getLogger(Task.class.getName()).log(Level.SEVERE,null, ex);
+    } catch (BrokenBarrierException ex) {
+      Logger.getLogger(Task.class.getName()).log(Level.SEVERE, null, ex); }
+  } }
+/**
+ * Main thread that demonstrates how to use CyclicBarrier.
+ */
+public class Main {
+  public static void main (String args[]) {
+    //Creating CyclicBarrier with 3 parties i.e. 3 Threads needs to call await()
+    
+    final CyclicBarrier cb = new CyclicBarrier(3, new Runnable(){
+      //Action that executes after the last thread arrives
+      @Override
+      public void run(){
+        System.out.println("All parties have arrived at the barrier, lets continue execution.");
+      }
+    });
+    //starting each thread
+    Thread t1 = new Thread(new Task(cb), "Thread 1");
+    Thread t2 = new Thread(new Task(cb), "Thread 2");
+    Thread t3 = new Thread(new Task(cb), "Thread 3");
+    t1.start();
+    t2.start();
+    t3.start();
+  } }
+```
+
+**Phaser**
+
+- It is a very similar construct to the CountDownLatch that allows us to coordinate the execution of threads.
+- Phaser’s primary purpose is to enable synchronization of threads that represent one or more phases of activity.
+- The Phaser allows us to build logic in which threads need to wait on the barrier before going to the next step of execution.
+- Phaser(Phaser parent, int parties) – This specifies a parent phaser for the newly created object and the number of parties required to advance to the next phase.
+```
+  public Phaser(Phaser parent, int parties) throws IllegalArgumentException
+```
+
+- https://www.baeldung.com/java-phaser
+- https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/phaser
+
+
+**Exchanger**
+
+- The Exchanger class in Java can be used to share objects between two threads of type T. The class provides only a single overloaded method exchange(T t).
+- When invoked exchange waits for the other thread in the pair to call it as well. At this point, the second thread finds the first thread is waiting with its object. The thread exchanges the objects they are holding and signals the exchange, and now they can return.
+- https://www.geeksforgeeks.org/java-util-concurrent-exchanger-class-with-examples/
+- https://www.baeldung.com/java-exchanger
+- https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/exchanger
+
 
 ## Non-Blocking synchronization
 
+- Non-blocking algorithms use machine-level atomic instructions such as compare-and-swap instead of locks to provide data integrity when multiple threads access shared resources.
+- Non-blocking algorithms dont block when multiple threads contend for the same data and thus greatly reduce scheduling overhead.
+- https://www.baeldung.com/java-asynchronous-programming
+- Future and CompletableFuture, JavaNIO library, Reactive Programing using FLow API, and Spring WebFlux are some example which provide asynchronous operation in Java. 
+
+
 # Concurrent Collections
 
-ConcurrentHashMap
+- Concurrent Collections provide better performance than synchronized (wrapper) collections. Synchronized collections use intrinsic locking and the entire collections are locked. Concurrent collections achieve thread-safety by dividing their data into segments and different threads acquire locks on different segments, thus increasing throughput.
+- The concurrent collections use a various ways to achieve thread-safety:
+  - **Copy on Write:**
+    - Concurrent collections utilizing this scheme are suitable for read-heavy use cases. An immutable copy is created of the backing collection and whenever a write operation is attempted, the copy is discarded and a new copy with the change is created. Reads of the collection don’t require any synchronization, though synchronization is needed briefly when the new array is being created. Examples include CopyOnWriteArrayList and CopyOnWriteArraySet
+  - **Compare and Swap:**
+    - Consider a computation in which the value of a single variable is used as input to a long-running calculation whose eventual result is used to update the variable. Traditional synchronization makes the whole computation atomic, excluding any other thread from concurrently accessing the variable. This reduces opportunities for parallel execution and hurts throughput. An algorithm based on CAS behaves differently: it makes a local copy of the variable and performs the calculation without getting exclusive access. 
+    - Only when it is ready to update the variable does it call CAS, which in one atomic operation compares the variable’s value with its value at the start and, if they are the same, updates it with the new value. 
+    - If they are not the same, the variable must have been modified by another thread; in this situation, the CAS thread can try the whole computation again using the new value, or give up, or— in some algorithms — continue, because the interference will have actually done its work for it! Collections using CAS include ConcurrentLinkedQueue and ConcurrentSkipListMap .
+  - **Lock:**
+    - Some collection classes use Lock to divide up the collection into multiple parts that can be locked separately resulting in improved concurrency. For example, LinkedBlockingQueue has separate locks for the head and tail ends of the queue, so that elements can be added and removed in parallel. Other collections using these locks include ConcurrentHashMap and most of the implementations of BlockingQueue .
+
+* ConcurrentHashMap
+  https://www.educative.io/courses/java-multithreading-for-senior-engineering-interviews/concurrenthashmap
+
+
 * ConcurrentLinkedQueue and ConcurrentLinkedDeque
 * CopyOnWriteArrayList
 * BlockingQueue Interface
 * ArrayBlockingQueue
 * LinkedBlockingQueue
 * PriorityBlockingQueue
-* COncurrent Modification Exception
+* Concurrent Modification Exception
 
 
 ## Best Practices and Patterns
@@ -1826,7 +1944,7 @@ ConcurrentHashMap
 
 ## Java 9+ features
 
-Reactive Programming with Flow API
+* Reactive Programming with Flow API
 * CompletableFuture Enhancements
 * Process API Updates
 * Local-Variable Type Inference (var keyword)
